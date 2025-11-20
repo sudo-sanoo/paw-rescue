@@ -1,0 +1,56 @@
+/* Smooth Scrolling & Snap Behavior */
+html {
+    scroll-behavior: smooth;
+    height: 100%;
+    overflow-y: scroll; /* Ensure scrolling */
+}
+
+body {
+    height: 100%;
+}
+
+/* Snap container for the sections */
+.snap-container {
+    height: 100vh;
+    overflow-y: auto; /* Allow scrolling within container */
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+}
+
+section {
+    scroll-snap-align: start;
+    height: 100vh; /* Force strictly 100vh */
+    min-height: 600px; /* Fallback for small mobile */
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Hide scrollbar for cleaner look */
+.snap-container::-webkit-scrollbar {
+    width: 8px;
+}
+.snap-container::-webkit-scrollbar-track {
+    background: #f1f1f1; 
+}
+.snap-container::-webkit-scrollbar-thumb {
+    background: #F59E0B; 
+    border-radius: 4px;
+}
+
+/* Carousel Transitions */
+.slide {
+    transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    pointer-events: none;
+}
+.slide.active {
+    opacity: 1;
+    pointer-events: all;
+    position: relative;
+}
