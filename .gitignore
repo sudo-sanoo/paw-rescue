@@ -1,0 +1,8 @@
+# VS Code settings
+.vscode/
+
+# VS Code workspace files
+*.code-workspace
+
+# VS Code temp files
+.history/
