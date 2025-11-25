@@ -6,9 +6,9 @@
     <title>PawRescue - Saving Lives Together</title>
     
     <!-- CSS -->
-    <link rel="stylesheet" href="page.css">
+    <link rel="stylesheet" href="css/index.css">
     <!-- JS -->
-    <script defer src="page.js"></script>
+    <script defer src="js/index.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -245,7 +245,7 @@
                             <i class="fa-solid fa-location-dot"></i>
                         </div>
                         <h3 class="text-2xl font-bold mb-3">Geo-Tag Rescue</h3>
-                        <p class="text-gray-400">Spot an injured animal? Snap a photo and drop a pin. Our app alerts nearby volunteers and vets instantly.</p>
+                        <p class="text-gray-400">Spot an injured or missing animal? Snap a photo and drop a pin. Our app alerts nearby volunteers and vets instantly.</p>
                     </div>
 
                     <!-- Feature 2 -->
@@ -307,8 +307,8 @@
                             <h3 class="text-3xl font-bold text-gray-800 mb-6">Welcome Back</h3>
                             <form onsubmit="event.preventDefault(); alert('Login clicked (Demo)');">
                                 <div class="mb-4">
-                                    <label class="block text-gray-600 text-sm font-bold mb-2">Email Address</label>
-                                    <input type="email" class="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-300 focus:border-brand focus:ring-2 focus:ring-brand-light outline-none transition" placeholder="you@example.com">
+                                    <label class="block text-gray-600 text-sm font-bold mb-2">Phone Number</label>
+                                    <input id="login-phone" type="text" class="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-300 focus:border-brand focus:ring-2 focus:ring-brand-light outline-none transition" placeholder="Phone Number (Malaysia)">
                                 </div>
                                 <div class="mb-6">
                                     <label class="block text-gray-600 text-sm font-bold mb-2">Password</label>
@@ -319,13 +319,6 @@
                                     Log In
                                 </button>
                             </form>
-                            <div class="mt-6 text-center">
-                                <p class="text-gray-500 text-sm">Or continue with</p>
-                                <div class="flex justify-center space-x-4 mt-3">
-                                    <button class="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition"><i class="fa-brands fa-facebook-f"></i></button>
-                                    <button class="w-10 h-10 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition"><i class="fa-brands fa-google"></i></button>
-                                </div>
-                            </div>
                         </div>
 
                         <!-- Register Form (Hidden by default on desktop) -->
@@ -337,8 +330,8 @@
                                     <input type="text" class="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-300 focus:border-brand focus:ring-2 focus:ring-brand-light outline-none transition" placeholder="John Doe">
                                 </div>
                                 <div class="mb-4">
-                                    <label class="block text-gray-600 text-sm font-bold mb-2">Email Address</label>
-                                    <input type="email" class="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-300 focus:border-brand focus:ring-2 focus:ring-brand-light outline-none transition" placeholder="you@example.com">
+                                    <label class="block text-gray-600 text-sm font-bold mb-2">Phone Number</label>
+                                    <input id="register-phone" type="text" class="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-300 focus:border-brand focus:ring-2 focus:ring-brand-light outline-none transition" placeholder="Phone Number (Malaysia)">
                                 </div>
                                 <div class="mb-6">
                                     <label class="block text-gray-600 text-sm font-bold mb-2">Create Password</label>

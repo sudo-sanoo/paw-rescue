@@ -151,29 +151,68 @@ function closeModal() {
     modal.classList.remove('flex');
 }
 
+function isValidMYPhone(phone) {
+    // Remove spaces
+    phone = phone.replace(/\s+/g, '');
+
+    // Malaysia mobile format: 01X-XXXXXXX or 01X-XXXXXXXX
+    const pattern = /^01[0-9]{7,8}$/;
+
+    return pattern.test(phone);
+}
+
 // --- Form Submission Handler (Demo) ---
 function handleAuthSubmission(type) {
     if (type === 'login') {
-        const email = document.getElementById('login-email').value;
+        const phone = document.getElementById('login-phone').value;
         const password = document.getElementById('login-password').value;
-        
-        if (email && password) {
-            showModal('Login Successful (Demo)', `Logged in as ${email}. Welcome to PawRescue!`, 'fa-solid fa-heart text-brand');
-        } else {
-            showModal('Input Error', 'Please enter both email and password.', 'fa-solid fa-circle-exclamation text-red-500');
+
+        if (!isValidMYPhone(phone)) {
+            showModal('Invalid Phone Number', 'Please enter a valid Malaysia phone number (e.g., 0123456789).', 'fa-solid fa-circle-exclamation text-red-500');
+            return;
         }
-    } else if (type === 'register') {
-        const name = document.getElementById('register-name').value;
-        const email = document.getElementById('register-email').value;
-        const password = document.getElementById('register-password').value;
-        
-        if (name && email && password) {
-            showModal('Registration Successful (Demo)', `Thank you, ${name}! Your account is created.`, 'fa-solid fa-hand-holding-heart text-brand-accent');
+
+        if (phone && password) {
+            showModal(
+                'Login Successful (Demo)',
+                `Logged in with +60 ${phone}. Welcome to PawRescue!`,
+                'fa-solid fa-heart text-brand'
+            );
         } else {
-            showModal('Input Error', 'Please fill out all required fields.', 'fa-solid fa-circle-exclamation text-red-500');
+            showModal(
+                'Input Error',
+                'Please enter both phone number and password.',
+                'fa-solid fa-circle-exclamation text-red-500'
+            );
+        }
+    }
+
+    else if (type === 'register') {
+        const name = document.getElementById('register-name').value;
+        const phone = document.getElementById('register-phone').value;
+        const password = document.getElementById('register-password').value;
+
+        if (!isValidMYPhone(phone)) {
+            showModal('Invalid Phone Number', 'Please enter a valid Malaysia phone number.', 'fa-solid fa-circle-exclamation text-red-500');
+            return;
+        }
+
+        if (name && phone && password) {
+            showModal(
+                'Registration Successful (Demo)',
+                `Thank you, ${name}! Your account (phone: +60 ${phone}) is created.`,
+                'fa-solid fa-hand-holding-heart text-brand-accent'
+            );
+        } else {
+            showModal(
+                'Input Error',
+                'Please fill out all required fields.',
+                'fa-solid fa-circle-exclamation text-red-500'
+            );
         }
     }
 }
+
 
 // Initialize the app state
 window.onload = () => {
