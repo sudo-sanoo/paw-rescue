@@ -1,3 +1,8 @@
+<?php
+session_start();
+require_once "includes/db.php";
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -305,14 +310,20 @@
                         <!-- Login Form -->
                         <div id="login-form" class="auth-form transition-opacity duration-300">
                             <h3 class="text-3xl font-bold text-gray-800 mb-6">Welcome Back</h3>
-                            <form onsubmit="event.preventDefault(); alert('Login clicked (Demo)');">
+                            <form action="auth/login.php" method="POST">
                                 <div class="mb-4">
                                     <label class="block text-gray-600 text-sm font-bold mb-2">Phone Number</label>
-                                    <input id="login-phone" type="text" class="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-300 focus:border-brand focus:ring-2 focus:ring-brand-light outline-none transition" placeholder="Phone Number (Malaysia)">
+                                    <div class="flex">
+                                        <span class="inline-flex items-center px-3 rounded-l-lg bg-gray-100 text-gray-600 border border-r-0 border-gray-300">+60</span>
+                                        <input id="login-phone" name="phone" type="text" class="w-full px-4 py-3 rounded-r-lg bg-gray-50 border border-gray-300 focus:border-brand focus:ring-2 focus:ring-brand-light outline-none transition" placeholder="Phone Number (Malaysia)">
+                                    </div>
                                 </div>
                                 <div class="mb-6">
                                     <label class="block text-gray-600 text-sm font-bold mb-2">Password</label>
-                                    <input type="password" class="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-300 focus:border-brand focus:ring-2 focus:ring-brand-light outline-none transition" placeholder="••••••••">
+                                    <div class="relative">
+                                        <input id="login-password" name="password" type="password" class="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-300 focus:border-brand focus:ring-2 focus:ring-brand-light outline-none transition" placeholder="••••••••">
+                                        <i id="toggle-login-password" class="fa-solid fa-eye-slash absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-800 cursor-pointer" onclick="togglePasswordVisibility('login-password')"></i>
+                                    </div>
                                     <a href="#" class="text-xs text-brand mt-2 block text-right hover:underline">Forgot Password?</a>
                                 </div>
                                 <button type="submit" class="w-full bg-brand hover:bg-brand-dark text-white font-bold py-3 px-4 rounded-lg shadow-lg transform transition hover:scale-[1.02]">
@@ -324,18 +335,24 @@
                         <!-- Register Form (Hidden by default on desktop) -->
                         <div id="register-form" class="auth-form absolute inset-0 p-8 md:p-12 flex flex-col justify-center bg-white transition-opacity duration-300 opacity-0 pointer-events-none" style="visibility: hidden;">
                             <h3 class="text-3xl font-bold text-gray-800 mb-6">Create Account</h3>
-                            <form onsubmit="event.preventDefault(); alert('Register clicked (Demo)');">
+                            <form action="auth/register.php" method="POST">
                                 <div class="mb-4">
                                     <label class="block text-gray-600 text-sm font-bold mb-2">Full Name</label>
-                                    <input type="text" class="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-300 focus:border-brand focus:ring-2 focus:ring-brand-light outline-none transition" placeholder="John Doe">
+                                    <input name="name" type="text" class="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-300 focus:border-brand focus:ring-2 focus:ring-brand-light outline-none transition" placeholder="John Doe">
                                 </div>
                                 <div class="mb-4">
                                     <label class="block text-gray-600 text-sm font-bold mb-2">Phone Number</label>
-                                    <input id="register-phone" type="text" class="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-300 focus:border-brand focus:ring-2 focus:ring-brand-light outline-none transition" placeholder="Phone Number (Malaysia)">
+                                    <div class="flex">
+                                        <span class="inline-flex items-center px-3 rounded-l-lg bg-gray-100 text-gray-600 border border-r-0 border-gray-300">+60</span>
+                                        <input id="register-phone" name="phone" type="text" class="w-full px-4 py-3 rounded-r-lg bg-gray-50 border border-gray-300 focus:border-brand focus:ring-2 focus:ring-brand-light outline-none transition" placeholder="Phone Number (Malaysia)">
+                                    </div>
                                 </div>
                                 <div class="mb-6">
                                     <label class="block text-gray-600 text-sm font-bold mb-2">Create Password</label>
-                                    <input type="password" class="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-300 focus:border-brand focus:ring-2 focus:ring-brand-light outline-none transition" placeholder="••••••••">
+                                    <div class="relative">
+                                        <input id="register-password" name="password" type="password" class="w-full px-4 py-3 rounded-lg bg-gray-50 border border-gray-300 focus:border-brand focus:ring-2 focus:ring-brand-light outline-none transition" placeholder="••••••••">
+                                        <i id="toggle-register-password" class="fa-solid fa-eye-slash absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-800 cursor-pointer" onclick="togglePasswordVisibility('register-password')"></i>
+                                    </div>
                                 </div>
                                 <button type="submit" class="w-full bg-brand hover:bg-brand-dark text-white font-bold py-3 px-4 rounded-lg shadow-lg transform transition hover:scale-[1.02]">
                                     Sign Up
@@ -358,5 +375,22 @@
             </div>
         </footer>
     </div>
+
+    <?php if (isset($_SESSION['auth_status']) && isset($_SESSION['auth_message'])): ?>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            showModal(
+                "<?php echo $_SESSION['auth_status'] === 'success' ? 'Success!' : 'Error'; ?>",
+                "<?php echo $_SESSION['auth_message']; ?>",
+                "<?php echo $_SESSION['auth_status'] === 'success' ? 'fa-solid fa-check-circle text-brand' : 'fa-solid fa-circle-exclamation text-red-500'; ?>"
+            );
+        });
+    </script>
+    <?php 
+    unset($_SESSION['auth_status']);
+    unset($_SESSION['auth_message']);
+    endif;
+    ?>
+
 </body>
 </html>

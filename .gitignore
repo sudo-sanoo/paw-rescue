@@ -6,3 +6,9 @@
 
 # VS Code temp files
 .history/
+
+# Ignore secrets
+config.php
+db.php
+
+*.txt
