@@ -291,7 +291,7 @@ require_once "includes/db.php";
                              <i class="fa-solid fa-cat absolute top-1/2 left-1/2 text-8xl transform -translate-x-1/2 -translate-y-1/2"></i>
                         </div>
                         <h2 class="text-3xl md:text-4xl font-bold mb-6 relative z-10">Join the Pack</h2>
-                        <p class="text-brand-light mb-8 relative z-10">Sign up to start reporting cases, donating, or adopting. One click can save a life.</p>
+                        <p class="text-white-50 mb-8 relative z-10">Sign up to start reporting cases, donating, or adopting. One click can save a life.</p>
                         <div class="relative z-10 hidden md:block">
                             <button id="switch-to-register" onclick="toggleAuth('register')" class="border-2 border-white text-white py-2 px-6 rounded-full font-bold hover:bg-white hover:text-brand transition w-full mb-4">Create Account</button>
                             <button id="switch-to-login" onclick="toggleAuth('login')" class="border-2 border-white text-white py-2 px-6 rounded-full font-bold hover:bg-white hover:text-brand transition w-full opacity-50 hidden">Log In Instead</button>

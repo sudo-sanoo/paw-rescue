@@ -85,7 +85,11 @@ try {
 
     $_SESSION['auth_status'] = 'success';
     $_SESSION['auth_message'] = 'Login successful! Redirecting to dashboard...';
-    header('Location: ../templates/user_dashboard.php');
+    if ($user['role'] === 'admin') {
+        header('Location: ../templates/admin_dashboard.php');
+    } else {
+        header('Location: ../templates/member_dashboard.php');
+    }
     exit;
 
 } catch (Exception $e) {

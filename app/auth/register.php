@@ -106,12 +106,12 @@ try {
     $_SESSION['user_id'] = $user_id;
     $_SESSION['full_name'] = $name;
     $_SESSION['phone'] = $phone_normalized;
-    $_SESSION['role'] = 'user';
+    $_SESSION['role'] = 'member';
 
     // Success message
     $_SESSION['auth_status'] = 'success';
     $_SESSION['auth_message'] = 'Account created successfully! Redirecting to dashboard...';
-    header('Location: ../templates/user_dashboard.php');
+    header('Location: ../templates/member_dashboard.php');
     exit;
 
 } catch (Exception $e) {
