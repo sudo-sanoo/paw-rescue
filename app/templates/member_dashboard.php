@@ -7,7 +7,7 @@ if ($_SESSION['role'] !== 'member') {
 }
 
 // debugging purpose during development
-echo "you are member";
+// echo "you are member";
 
 // this is a shared layout
 ?>
