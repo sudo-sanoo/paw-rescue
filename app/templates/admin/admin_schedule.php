@@ -1,0 +1,1 @@
+<div id="view-schedule" class="hidden text-center py-20 text-gray-500">Schedule View Content</div>

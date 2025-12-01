@@ -1,0 +1,1 @@
+<div id="view-report" class="hidden text-center py-20 text-gray-500">Report View Content</div>

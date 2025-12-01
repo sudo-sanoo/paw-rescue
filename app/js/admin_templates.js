@@ -5,31 +5,41 @@ lucide.createIcons();
 // Store original values to detect changes
 let originalProfile = {
     name: "Sarah Jenkins",
-    phone: "+60 12 345 6789",
-    email: "", // Empty initially as per prompt requirements
-    avatarSrc: "", // Will populate on init if needed, currently empty/hidden
+    phone: "+60123456789",
+    email: "", // Empty initially
+    avatarSrc: "",
     hasEmail: false
 };
 
+
 // --- Initialization ---
 function initSettings() {
-    // Capture initial state from DOM
-    originalProfile.name = document.getElementById('display-fullname').value;
-    originalProfile.phone = document.getElementById('display-phone').value;
-    
-    // Check email state
-    const emailVal = document.getElementById('display-email-value').value;
+    // defensive: only run if the settings DOM exists
+    const nameEl = document.getElementById('display-fullname');
+    const phoneEl = document.getElementById('display-phone');
+    const emailFilledEl = document.getElementById('display-email-filled');
+    const emailValueEl = document.getElementById('display-email-value');
+    const imgEl = document.getElementById('settings-avatar-img');
+
+    // If any essential element is missing, bail out silently (we're likely not on settings page)
+    if (!nameEl || !phoneEl || !emailFilledEl || !imgEl) {
+        return;
+    }
+
+    originalProfile.name = nameEl.value || "";
+    originalProfile.phone = phoneEl.value || "";
+
+    const emailVal = (emailValueEl && emailValueEl.value) ? emailValueEl.value : "";
     if (emailVal && emailVal.trim() !== "") {
         originalProfile.email = emailVal;
         originalProfile.hasEmail = true;
     } else {
-            originalProfile.email = "";
-            originalProfile.hasEmail = false;
+        originalProfile.email = "";
+        originalProfile.hasEmail = false;
     }
 
-    // Capture avatar source (handle potentially empty src)
-    const img = document.getElementById('settings-avatar-img');
-    originalProfile.avatarSrc = img.src;
+    // Capture avatar source (may be empty)
+    originalProfile.avatarSrc = imgEl.src || "";
 }
 
 // --- Change Detection ---
@@ -153,31 +163,87 @@ function toggleDesktopSidebar() {
     sidebar.classList.toggle('sidebar-collapsed');
 }
 
+const _adminPageCache = new Map(); // caches fetched HTML by tabId
+function afterPageLoad(tabId) {
+    // Recreate lucide icons inside newly inserted HTML
+    if (typeof lucide !== 'undefined' && lucide.createIcons) {
+        try { lucide.createIcons(); } catch(e){ console.warn(e); }
+    }
+
+    // Show the content if hidden
+    const view = document.getElementById('view-' + tabId);
+    if(view) view.classList.remove('hidden');
+
+    // Page-specific initializers
+    if (tabId === 'settings' && typeof initSettings === 'function') {
+        setTimeout(() => initSettings(), 0);
+    }
+}
+
 function switchTab(tabId) {
+    // 1) Update sidebar nav styling
     document.querySelectorAll('.nav-item').forEach(el => {
         el.classList.remove('bg-orange-50', 'text-orange-600', 'font-medium');
         el.classList.add('text-gray-600', 'hover:bg-gray-50', 'hover:text-gray-900');
     });
 
     const activeNav = document.getElementById('nav-' + tabId);
-    if(activeNav) {
+    if (activeNav) {
         activeNav.classList.remove('text-gray-600', 'hover:bg-gray-50', 'hover:text-gray-900');
         activeNav.classList.add('bg-orange-50', 'text-orange-600', 'font-medium');
     }
 
-    ['dashboard', 'animals', 'report', 'volunteers', 'schedule', 'settings'].forEach(id => {
-        const el = document.getElementById('view-' + id);
-        if (el) el.classList.add('hidden');
-    });
-
-    const activeView = document.getElementById('view-' + tabId);
-    if (activeView) {
-        activeView.classList.remove('hidden');
+    const pageContent = document.getElementById('page-content');
+    if (!pageContent) {
+        console.error('page-content container not found!');
+        return;
     }
 
-    if (!sidebar.classList.contains('-translate-x-full') && window.innerWidth < 1024) {
+    // Dashboard is default — do not AJAX-fetch it unless we cached and intentionally replaced it
+    if (tabId === 'dashboard') {
+        if (_adminPageCache.has('dashboard')) {
+            pageContent.innerHTML = _adminPageCache.get('dashboard');
+            afterPageLoad('dashboard');
+        } else {
+            // if we didn't cache dashboard earlier, do nothing (it's already shown)
+        }
+    } else {
+        // If page cached, use it
+        if (_adminPageCache.has(tabId)) {
+            pageContent.innerHTML = _adminPageCache.get(tabId);
+            afterPageLoad(tabId);
+        } else {
+            // Show loading indicator (keeps layout)
+            pageContent.innerHTML = '<div class="py-20 text-center text-gray-500">Loading...</div>';
+
+            // fetch path relative to current file: app/templates/admin/admin_<tab>.php
+            const fetchPath = `../templates/admin/admin_${tabId}.php`;
+
+            fetch(fetchPath, { credentials: 'same-origin' })
+                .then(resp => {
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                    return resp.text();
+                })
+                .then(html => {
+                    // insert HTML and cache it
+                    pageContent.innerHTML = html;
+                    _adminPageCache.set(tabId, html);
+                    afterPageLoad(tabId);
+                })
+                .catch(err => {
+                    console.error('Failed to load admin page:', err);
+                    pageContent.innerHTML = `<div class="py-20 text-center text-red-500">Failed to load page (${tabId}).</div>`;
+                });
+        }
+    }
+
+    // Close mobile sidebar if open (mobile UX)
+    if (sidebar && !sidebar.classList.contains('-translate-x-full') && window.innerWidth < 1024) {
         toggleMobileMenu();
     }
+
+    // Scroll to top of container for nicer UX
+    if (pageContent) pageContent.scrollTop = 0;
 }
 
 function saveNotificationPreference() {
@@ -363,24 +429,37 @@ function savePassword() {
     showSuccessModal('Password Changed', 'Your password has been updated securely.');
 }
 
-// --- 5. Success/Error Modal Logic ---
-const modal = document.getElementById('custom-modal');
-const modalTitle = document.getElementById('modal-title');
-const modalMessage = document.getElementById('modal-message');
-const modalIcon = document.getElementById('modal-icon');
+// --- lazy modal refs (so they don't throw when page doesn't have them yet) ---
+let modal = null;
+let modalTitle = null;
+let modalMessage = null;
+let modalIcon = null;
 
+function ensureModalRefs() {
+    if (!modal) modal = document.getElementById('custom-modal');
+    if (!modalTitle) modalTitle = document.getElementById('modal-title');
+    if (!modalMessage) modalMessage = document.getElementById('modal-message');
+    if (!modalIcon) modalIcon = document.getElementById('modal-icon');
+}
+
+// updated showSuccessModal uses lazy refs
 function showSuccessModal(title, message, iconClass = 'fa-solid fa-check-circle text-orange-500') {
+    ensureModalRefs();
+    if (!modal || !modalTitle || !modalMessage || !modalIcon) return; // fail-safe
+
     modalTitle.textContent = title;
     modalMessage.textContent = message;
-    
-    modalIcon.className = ''; 
+
+    modalIcon.className = '';
     modalIcon.className = iconClass + ' text-5xl mb-4 animate-pulse-slow';
-    
+
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 }
 
 function closeSuccessModal() {
+    ensureModalRefs();
+    if (!modal) return;
     modal.classList.add('hidden');
     modal.classList.remove('flex');
 }
