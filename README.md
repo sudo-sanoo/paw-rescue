@@ -2,7 +2,7 @@ credentials
 
 Admin123
 Phone number: +60...
-Password Admin123@pawrescue
+Password Adm1n@pawrescue
 
 User1
 Phone number: +60123456789

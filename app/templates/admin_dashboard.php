@@ -25,6 +25,7 @@ $user = $result->fetch_assoc();
 $full_name = $user['full_name'];
 $user_role = ($user['role'] == 'admin') ? "System Admin" : $user['role'];
 $phone = $user['phone'];
+$profile_photo = $user['profile_photo'] ?? ''; // stored as relative path like "images/uploads/avatars/abc.png"
 
 $initials = getInitials($user['full_name']);
 ?>
@@ -126,7 +127,7 @@ $initials = getInitials($user['full_name']);
                             <i data-lucide="menu" class="w-6 h-6"></i>
                         </button>
                         <button onclick="toggleDesktopSidebar()" class="hidden lg:block text-gray-400 hover:text-gray-600 hover:bg-gray-50 p-1.5 rounded-lg transition-colors" title="Toggle Sidebar">
-                            <i data-lucide="panel-left" class="w-6 h-6"></i>
+                            <i data-lucide="menu" class="w-6 h-6"></i>
                         </button>
                         <div class="relative w-full max-w-md hidden md:block">
                             <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5"></i>
@@ -147,7 +148,8 @@ $initials = getInitials($user['full_name']);
                             </div>
                             <!-- Added ID for avatar to update it later -->
                             <div id="header-avatar" class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold border-2 border-orange-50 overflow-hidden">
-                                <span class="text-sm"><?php echo htmlspecialchars($initials);?></span>
+                                <span class="text-sm"<?php if ($profile_photo) echo 'class="hidden"'; ?>><?php echo htmlspecialchars($initials);?></span>
+                                <img id="settings-avatar-img" src="<?php echo $profile_photo ? '../' . htmlspecialchars($profile_photo) : ''; ?>" class="w-full h-full object-cover <?php echo $profile_photo ? '' : 'hidden'; ?>" alt="Profile">
                             </div>
                         </div>
                     </div>

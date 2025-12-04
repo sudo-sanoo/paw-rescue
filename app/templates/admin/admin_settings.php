@@ -1,3 +1,4 @@
+<!-- admin_settings.php -->
 <?php
 require_once __DIR__ . '/../../includes/session_check.php';
 require_once __DIR__ . '/../../includes/db.php';
@@ -17,10 +18,21 @@ $stmt->execute();
 $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 
-$user_id = $user['user_id'];
-$full_name = $user['full_name'];
-$user_role = ($user['role'] == 'admin') ? "System Admin" : $user['role'];
-$phone_number = str_replace("+60", "", $user['phone']);
+// Fallbacks
+$user_id = $user['user_id'] ?? $user_id;
+
+$full_name = $user['full_name'] ?? '';
+
+$user_role = ($user['role'] ?? 'user') === 'admin' ? "System Admin" : ($user['role'] ?? 'user');
+
+$phone_number = isset($user['phone']) ? str_replace("+60", "", $user['phone']) : '';
+
+$email = $user['email'] ?? '';
+$has_email = !empty($email);
+
+$profile_photo = $user['profile_photo'] ?? ''; // stored as relative path like "images/uploads/avatars/abc.png"
+$profile_photo_attr = $profile_photo ? $profile_photo : '';
+$profile_photo_src = $profile_photo ? ('../../' . $profile_photo) : ''; // admin template path -> adjust if needed
 
 $initials = getInitials($full_name);
 ?>
@@ -40,8 +52,12 @@ $initials = getInitials($full_name);
                 <div class="shrink-0 flex flex-col items-center gap-3">
                     <!-- Profile Image Container -->
                     <div id="settings-avatar-container" class="w-24 h-24 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 text-2xl font-bold border-4 border-white shadow-sm overflow-hidden relative">
-                        <span id="settings-avatar-initials"><?php echo htmlspecialchars($initials);?></span>
-                        <img id="settings-avatar-img" src="" class="w-full h-full object-cover hidden" alt="Profile">
+                        <span id="settings-avatar-initials" class="<?php echo $profile_photo ? 'hidden' : ''; ?>"><?php echo htmlspecialchars(getInitials($full_name)); ?></span>
+                        <img id="settings-avatar-img"
+                            src="<?php echo htmlspecialchars($profile_photo_src); ?>"
+                            data-profile="<?php echo htmlspecialchars($profile_photo_attr); ?>"
+                            class="w-full h-full object-cover <?php echo $profile_photo ? '' : 'hidden'; ?>"
+                            alt="Profile">
                     </div>
                     <!-- Change Photo Button -->
                     <button onclick="triggerPhotoUpload()" class="text-sm text-orange-600 font-medium hover:text-orange-700">Change Photo</button>
@@ -71,12 +87,12 @@ $initials = getInitials($full_name);
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
                         <!-- State 1: No Email -->
-                        <div id="display-email-empty" class="text-gray-500 py-2 text-sm italic">
+                        <div id="display-email-empty" class="text-gray-500 py-2 text-sm italic <?php echo $email ? 'hidden' : ''; ?>">
                             You do not have an email address.
                         </div>
-                        <!-- State 2: Has Email (Hidden by default for demo start) -->
-                        <div id="display-email-filled" class="hidden">
-                            <input type="email" id="display-email-value" value="" disabled class="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500">
+                        <!-- State 2: Has Email (Hidden by default) -->
+                        <div id="display-email-filled" class="<?php echo $email ? '' : 'hidden'; ?>">
+                            <input type="email" id="display-email-value" value="<?php echo htmlspecialchars($email); ?>" disabled class="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-500">
                         </div>
                     </div>
 
@@ -131,7 +147,9 @@ $initials = getInitials($full_name);
                 <!-- Change/Add Email -->
                 <div class="flex items-center justify-between py-2 border-b border-gray-50">
                     <div><p class="font-medium text-gray-800">Email Address</p><p class="text-sm text-gray-500">Manage your connected email.</p></div>
-                    <button id="security-email-btn" onclick="openModal('email-modal')" class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors">Add</button>
+                    <button id="security-email-btn" onclick="openModal('email-modal')" class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors">
+                        <?php echo $has_email ? 'Change' : 'Add'; ?>
+                    </button>
                 </div>
                 <!-- Change Password -->
                 <div class="flex items-center justify-between py-2">
