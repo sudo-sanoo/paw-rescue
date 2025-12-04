@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/session_check.php';
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/helper_func.php';
 
 if ($_SESSION['role'] !== 'admin') {
     header("Location: member_dashboard.php");
@@ -10,6 +12,21 @@ if ($_SESSION['role'] !== 'admin') {
 // echo "you are admin";
 
 // this is a shared layout
+
+// Fetch current user info
+$user_id = $_SESSION['user_id'];
+
+$stmt = $conn->prepare("SELECT * FROM users WHERE user_id = ? LIMIT 1");
+$stmt->bind_param("s", $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+
+$full_name = $user['full_name'];
+$user_role = ($user['role'] == 'admin') ? "System Admin" : $user['role'];
+$phone = $user['phone'];
+
+$initials = getInitials($user['full_name']);
 ?>
 
 <!DOCTYPE html>
@@ -75,7 +92,7 @@ if ($_SESSION['role'] !== 'admin') {
                 </button>
                 <button onclick="switchTab('report')" id="nav-report" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900">
                     <i data-lucide="file-text" class="w-5 h-5 shrink-0"></i>
-                    <span>Report</span>
+                    <span>Reports</span>
                 </button>
                 <button onclick="switchTab('volunteers')" id="nav-volunteers" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900">
                     <i data-lucide="users" class="w-5 h-5 shrink-0"></i>
@@ -125,12 +142,12 @@ if ($_SESSION['role'] !== 'admin') {
                         </button>
                         <div class="flex items-center gap-3 pl-4 border-l border-gray-200">
                             <div class="text-right hidden md:block">
-                                <p class="text-sm font-medium text-gray-700">Sarah Jenkins</p>
-                                <p class="text-xs text-gray-500">Adoption Coordinator</p>
+                                <p class="text-sm font-medium text-gray-700"><?php echo htmlspecialchars($full_name);?></p>
+                                <p class="text-xs text-gray-500"><?php echo htmlspecialchars($user_role);?></p>
                             </div>
                             <!-- Added ID for avatar to update it later -->
                             <div id="header-avatar" class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold border-2 border-orange-50 overflow-hidden">
-                                <span class="text-sm">SJ</span>
+                                <span class="text-sm"><?php echo htmlspecialchars($initials);?></span>
                             </div>
                         </div>
                     </div>
@@ -144,7 +161,7 @@ if ($_SESSION['role'] !== 'admin') {
                     <div id="view-dashboard" class="space-y-8 animate-fade-in">
                         <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             <div>
-                                <h1 class="text-2xl font-bold text-gray-800">Welcome back, Sarah!</h1>
+                                <h1 class="text-2xl font-bold text-gray-800">Welcome back, <?php echo htmlspecialchars($full_name); ?>!</h1>
                                 <p class="text-gray-500">Here's what's happening at PawRescue today.</p>
                             </div>
                             <button class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors flex items-center gap-2">

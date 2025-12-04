@@ -4,7 +4,7 @@ lucide.createIcons();
 // --- STATE MANAGEMENT ---
 // Store original values to detect changes
 let originalProfile = {
-    name: "Sarah Jenkins",
+    name: "Demo Name",
     phone: "+60123456789",
     email: "", // Empty initially
     avatarSrc: "",
@@ -252,7 +252,7 @@ function saveNotificationPreference() {
 
 // --- Logout Logic ---
 function confirmLogout() {
-    window.location.href = '#'; // Demo redirect
+    window.location.href = '../auth/logout.php';
 }
 
 // --- 2. Profile Photo Logic (Updated for Cropper.js) ---
@@ -387,7 +387,7 @@ function saveEmailDraft() {
     // Switch display state
     document.getElementById('display-email-empty').classList.add('hidden');
     document.getElementById('display-email-filled').classList.remove('hidden');
-    document.getElementById('security-email-btn').textContent = "Change Email";
+    document.getElementById('security-email-btn').textContent = "Change";
 
     closeModalById('email-modal');
     checkForChanges();
