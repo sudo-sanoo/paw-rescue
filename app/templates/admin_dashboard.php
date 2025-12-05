@@ -148,8 +148,13 @@ $initials = getInitials($user['full_name']);
                             </div>
                             <!-- Added ID for avatar to update it later -->
                             <div id="header-avatar" class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold border-2 border-orange-50 overflow-hidden">
-                                <span class="text-sm"<?php if ($profile_photo) echo 'class="hidden"'; ?>><?php echo htmlspecialchars($initials);?></span>
-                                <img id="settings-avatar-img" src="<?php echo $profile_photo ? '../' . htmlspecialchars($profile_photo) : ''; ?>" class="w-full h-full object-cover <?php echo $profile_photo ? '' : 'hidden'; ?>" alt="Profile">
+                                <span class="text-sm <?php echo $profile_photo ? 'hidden' : ''; ?>">
+                                    <?php echo htmlspecialchars($initials);?>
+                                </span>
+                                <img id="header-avatar-img" 
+                                    src="<?php echo $profile_photo ? '../' . htmlspecialchars($profile_photo) : ''; ?>" 
+                                    class="w-full h-full object-cover <?php echo $profile_photo ? '' : 'hidden'; ?>" 
+                                    alt="Profile">
                             </div>
                         </div>
                     </div>

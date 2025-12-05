@@ -483,22 +483,43 @@ function closeCropModal() {
 
 function confirmCrop() {
     if (!cropper) return;
+
+    // 1. Get the cropped image data
     const canvas = cropper.getCroppedCanvas({ width: 300, height: 300 });
     const dataUrl = canvas.toDataURL('image/png');
-    const settingsImg = safeEl('settings-avatar-img');
-    const initials = safeEl('settings-avatar-initials');
 
+    // 2. Select BOTH elements by their UNIQUE IDs
+    const settingsImg = document.getElementById('settings-avatar-img');
+    const settingsInitials = document.getElementById('settings-avatar-initials');
+    
+    const headerImg = document.getElementById('header-avatar-img'); // New ID
+    const headerContainer = document.getElementById('header-avatar');
+
+    // 3. Update the Settings Page Image
     if (settingsImg) {
         settingsImg.src = dataUrl;
         settingsImg.classList.remove('hidden');
     }
-    if (initials) initials.classList.add('hidden');
+    if (settingsInitials) {
+        settingsInitials.classList.add('hidden');
+    }
 
-    const headerAvatar = safeEl('header-avatar');
-    if (headerAvatar) headerAvatar.innerHTML = `<img src="${dataUrl}" class="w-full h-full object-cover">`;
+    // 4. Update the Header Image
+    if (headerImg) {
+        headerImg.src = dataUrl;
+        headerImg.classList.remove('hidden');
+        
+        // Ensure header text/initials are hidden if we are showing an image
+        // (Assuming the header structure usually has a span next to the img)
+        if (headerContainer) {
+            const span = headerContainer.querySelector('span');
+            if (span) span.classList.add('hidden');
+        }
+    }
 
+    // 5. Cleanup
     closeCropModal();
-    checkForChanges();
+    checkForChanges(); // This shows the "Save" bar
 }
 
 // --- Generic Modal Logic ---
