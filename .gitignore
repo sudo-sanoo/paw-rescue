@@ -11,6 +11,16 @@
 config.php
 db.php
 
+# Ignore files inside avatars
+/app/images/uploads/avatars/*
+/app/images/uploads/injured_animals/*
+/app/images/uploads/locations/*
+
+# Includes these folders in commit history
+!/app/images/uploads/avatars/.gitkeep
+!/app/images/uploads/injured_animals/.gitkeep
+!/app/images/uploads/locations/.gitkeep
+
 *.txt
 *prototype.html
 *.sql
