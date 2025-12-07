@@ -1,10 +1,10 @@
-<!-- admin_settings.php -->
+<!-- member_settings.php -->
 <?php
 require_once __DIR__ . '/../../includes/session_check.php';
 require_once __DIR__ . '/../../includes/db.php';
 require_once __DIR__ . '/../../includes/helper_func.php';
 
-requireRole(['admin']);
+requireRole(['user', 'volunteer', 'veterinarian']);
 
 // Fetch current user info
 $user_id = $_SESSION['user_id'];
@@ -20,7 +20,13 @@ $user_id = $user['user_id'] ?? $user_id;
 
 $full_name = $user['full_name'] ?? '';
 
-$user_role = ($user['role'] ?? 'user') === 'admin' ? "System Admin" : ($user['role'] ?? 'user');
+$role_map = [
+    'user'       => 'Member',
+    'volunteer'    => 'Volunteer',
+    'veterinarian' => 'Veterinarian System Administrator',
+];
+$role_identifier = $user['role'] ?? 'user';
+$user_role = $role_map[$role_identifier] ?? ucfirst($role_identifier);
 
 $phone_number = isset($user['phone']) ? str_replace("+60", "", $user['phone']) : '';
 
@@ -29,7 +35,7 @@ $has_email = !empty($email);
 
 $profile_photo = $user['profile_photo'] ?? ''; // stored as relative path like "images/uploads/avatars/abc.png"
 $profile_photo_attr = $profile_photo ? $profile_photo : '';
-$profile_photo_src = $profile_photo ? ('../../' . $profile_photo) : ''; // admin template path -> adjust if needed
+$profile_photo_src = $profile_photo ? ('../../' . $profile_photo) : ''; // member template path -> adjust if needed
 
 $initials = getInitials($full_name);
 ?>

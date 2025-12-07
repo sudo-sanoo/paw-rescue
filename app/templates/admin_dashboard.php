@@ -3,10 +3,7 @@ require_once __DIR__ . '/../includes/session_check.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/helper_func.php';
 
-if ($_SESSION['role'] !== 'admin') {
-    header("Location: member_dashboard.php");
-    exit;
-}
+requireRole(['admin']);
 
 // debugging purpose during development
 // echo "you are admin";
