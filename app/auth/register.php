@@ -117,8 +117,8 @@ try {
 
     // Success message
     $_SESSION['auth_status'] = 'success';
-    $_SESSION['auth_message'] = 'Account created successfully! Redirecting to dashboard...';
-    header('Location: ../templates/member_dashboard.php');
+    $_SESSION['auth_message'] = 'Account created successfully! Please log in to continue.';
+    header('Location: ../index.php#auth');
     exit;
 
 } catch (Exception $e) {
