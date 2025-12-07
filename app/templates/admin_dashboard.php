@@ -20,7 +20,7 @@ $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 
 $full_name = $user['full_name'];
-$user_role = ($user['role'] == 'admin') ? "System Admin" : $user['role'];
+$user_role = ($user['role'] == 'admin') ? "PawRescue System Admin" : $user['role'];
 $phone = $user['phone'];
 $profile_photo = $user['profile_photo'] ?? ''; // stored as relative path like "images/uploads/avatars/abc.png"
 
