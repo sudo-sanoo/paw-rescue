@@ -40,6 +40,13 @@ if ($name === '' || $phone_input === '' || $password === '') {
     exit;
 }
 
+if (strlen($name) > 30) {
+    $_SESSION['auth_status'] = 'error';
+    $_SESSION['auth_message'] = 'Full name cannot exceed 30 characters.';
+    header('Location: ../index.php#auth');
+    exit;
+}
+
 $phone_normalized = normalizePhoneToPlus60($phone_input);
 if ($phone_normalized === null || !isValidMYPhonePlus60($phone_normalized)) {
     $_SESSION['auth_status'] = 'error';

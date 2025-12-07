@@ -549,9 +549,13 @@ function closeModalById(modalId) {
 
 // --- Saving Field Drafts (Updates UI only, shows Save Bar) ---
 function saveNameDraft() {
-    const newName = document.getElementById('modal-input-name').value;
-    if (!newName.trim()) {
+    const newName = document.getElementById('modal-input-name').value.trim();
+    if (!newName) {
         showSuccessModal('Error', 'Name cannot be empty.', 'fa-solid fa-circle-exclamation text-red-500');
+        return;
+    }
+    if (newName.length > 30) {
+        showSuccessModal('Error', 'Full name cannot exceed 30 characters.', 'fa-solid fa-circle-exclamation text-red-500');
         return;
     }
     document.getElementById('display-fullname').value = newName;
