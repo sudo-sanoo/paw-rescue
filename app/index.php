@@ -8,7 +8,7 @@ require_once "includes/db.php";
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PawRescue - Saving Lives Together</title>
+    <title>PawRescue</title>
     
     <!-- CSS -->
     <link rel="stylesheet" href="css/index.css">
