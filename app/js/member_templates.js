@@ -354,11 +354,25 @@ function afterPageLoad(tabId) {
     const view = document.getElementById('view-' + tabId);
     if(view) view.classList.remove('hidden');
 
+    if (tabId === 'join') {
+        // We use setTimeout to ensure the DOM render is complete
+        setTimeout(() => initSignaturePad(), 0);
+    }
+
     // Page-specific initializers
     if (tabId === 'settings' && typeof initSettings === 'function') {
         setTimeout(() => initSettings(), 0);
     }
 }
+
+const tabTitles = {
+    'dashboard': 'Home',
+    'report':    'Report Emergency',
+    'activity':  'My Reports',
+    'adopt':     'Adopt an Animal',
+    'join':      'Volunteer Application',
+    'settings':  'Settings',
+};
 
 function switchTab(tabId) {
     // 1) Update sidebar nav styling
@@ -371,6 +385,14 @@ function switchTab(tabId) {
     if (activeNav) {
         activeNav.classList.remove('text-gray-600', 'hover:bg-gray-50', 'hover:text-gray-900');
         activeNav.classList.add('bg-orange-50', 'text-orange-600', 'font-medium');
+    }
+
+    const pageTitleEl = document.getElementById('page-title');
+    if (pageTitleEl) {
+        // Use the friendly title from the map, defaulting to 'Dashboard' if not found
+        pageTitleEl.textContent = tabTitles[tabId] || 'Dashboard';
+    } else {
+        console.error('page-title container not found!');
     }
 
     const pageContent = document.getElementById('page-content');
@@ -646,6 +668,7 @@ let modal = null;
 let modalTitle = null;
 let modalMessage = null;
 let modalIcon = null;
+let onModalClose = null;
 
 function ensureModalRefs() {
     if (!modal) modal = document.getElementById('custom-modal');
@@ -655,7 +678,7 @@ function ensureModalRefs() {
 }
 
 // updated showSuccessModal uses lazy refs
-function showSuccessModal(title, message, iconClass = 'fa-solid fa-check-circle text-orange-500') {
+function showSuccessModal(title, message, iconClass = 'fa-solid fa-check-circle text-orange-500', callback = null) {
     ensureModalRefs();
     if (!modal || !modalTitle || !modalMessage || !modalIcon) return; // fail-safe
 
@@ -664,6 +687,7 @@ function showSuccessModal(title, message, iconClass = 'fa-solid fa-check-circle 
 
     modalIcon.className = '';
     modalIcon.className = iconClass + ' text-5xl mb-4 animate-pulse-slow';
+    onModalClose = callback;
 
     modal.classList.remove('hidden');
     modal.classList.add('flex');
@@ -672,8 +696,139 @@ function showSuccessModal(title, message, iconClass = 'fa-solid fa-check-circle 
 function closeSuccessModal() {
     ensureModalRefs();
     if (!modal) return;
+
     modal.classList.add('hidden');
     modal.classList.remove('flex');
+
+    if (typeof onModalClose === 'function') {
+        onModalClose();
+        onModalClose = null; // Reset it so it doesn't run for other modals
+    }
+}
+
+// --- Custom Dropdown Logic ---
+        
+// 1. Toggle Visibility
+function toggleCustomDropdown(id) {
+    const menu = document.getElementById(id + '-menu');
+    
+    // Close all other dropdowns first
+    document.querySelectorAll('.custom-dropdown-menu').forEach(el => {
+        if (el.id !== id + '-menu') el.classList.add('hidden');
+    });
+    
+    menu.classList.toggle('hidden');
+}
+
+// 2. Select Option
+function selectCustomOption(dropdownId, value, label) {
+    // Update Label
+    const labelEl = document.getElementById(dropdownId + '-label');
+    if(labelEl) labelEl.innerText = label;
+
+    // Close Menu
+    const menu = document.getElementById(dropdownId + '-menu');
+    menu.classList.add('hidden');
+}
+
+// 3. Close when clicking outside
+window.addEventListener('click', function(e) {
+    if (!e.target.closest('.custom-dropdown-container')) {
+        document.querySelectorAll('.custom-dropdown-menu').forEach(el => {
+            el.classList.add('hidden');
+        });
+    }
+});
+
+// --- Volunteer Wizard Logic ---
+let currentStep = 1;
+
+function goToStep(step) {
+    // Validate before jumping (simplified for prototype)
+    // In real app, check if previous steps are valid
+    showStep(step);
+}
+
+function changeStep(direction) {
+    const newStep = currentStep + direction;
+    if (newStep >= 1 && newStep <= 4) {
+        showStep(newStep);
+    }
+}
+
+function showStep(step) {
+    // Hide all steps
+    for(let i=1; i<=4; i++) {
+        document.getElementById(`step-content-${i}`).classList.add('hidden');
+        const indicator = document.getElementById(`step-indicator-${i}`);
+        const label = indicator.nextElementSibling;
+        
+        // Reset styles
+        if (i < step) {
+            // Completed
+            indicator.className = "w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center font-bold border-4 border-white shadow transition-colors";
+            indicator.innerHTML = '<i data-lucide="check" class="w-5 h-5"></i>';
+            label.classList.add('text-green-600');
+        } else if (i === step) {
+            // Current
+            indicator.className = "w-10 h-10 rounded-full bg-orange-600 text-white flex items-center justify-center font-bold border-4 border-white shadow transition-colors";
+            indicator.innerHTML = i;
+            label.classList.add('text-gray-900', 'font-bold');
+            label.classList.remove('text-gray-500');
+        } else {
+            // Future
+            indicator.className = "w-10 h-10 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-bold border-4 border-white shadow transition-colors";
+            indicator.innerHTML = i;
+            label.classList.remove('text-green-600', 'text-gray-900', 'font-bold');
+            label.classList.add('text-gray-500');
+        }
+    }
+
+    // Update Progress Lines
+    const line1 = document.getElementById('line-1');
+    const line2 = document.getElementById('line-2');
+    const line3 = document.getElementById('line-3');
+
+    // Line 1 (between 1 and 2) active if we are at step 2 or more
+    line1.className = step >= 2 ? 
+        'flex-1 h-0.5 border-t-4 border-dotted border-orange-500 mx-2 transition-all duration-300' : 
+        'flex-1 h-0.5 border-t-4 border-dotted border-transparent mx-2 transition-all duration-300';
+
+    // Line 2 (between 2 and 3) active if we are at step 3 or more
+    line2.className = step >= 3 ? 
+        'flex-1 h-0.5 border-t-4 border-dotted border-orange-500 mx-2 transition-all duration-300' : 
+        'flex-1 h-0.5 border-t-4 border-dotted border-transparent mx-2 transition-all duration-300';
+    
+    // Line 3 (between 3 and 4) active if we are at step 4
+    line3.className = step >= 4 ? 
+        'flex-1 h-0.5 border-t-4 border-dotted border-orange-500 mx-2 transition-all duration-300' : 
+        'flex-1 h-0.5 border-t-4 border-dotted border-transparent mx-2 transition-all duration-300';
+
+    // Show current step
+    document.getElementById(`step-content-${step}`).classList.remove('hidden');
+    
+    // Buttons state
+    const btnBack = document.getElementById('btn-back');
+    const btnNext = document.getElementById('btn-next');
+    const btnSubmit = document.getElementById('btn-submit');
+
+    btnBack.classList.toggle('hidden', step === 1);
+    
+    if (step === 4) {
+        btnNext.classList.add('hidden');
+        btnSubmit.classList.remove('hidden');
+        // Initialize canvas when showing step 4
+        // The global window.resizeCanvas function will be called here
+        if (typeof window.resizeCanvas === 'function') {
+            setTimeout(window.resizeCanvas, 100); 
+        }
+    } else {
+        btnNext.classList.remove('hidden');
+        btnSubmit.classList.add('hidden');
+    }
+
+    currentStep = step;
+    lucide.createIcons(); // Re-render icons for indicators
 }
 
 // --- Expose to global for inline handlers ---
@@ -695,6 +850,14 @@ window.saveEmailDraft = saveEmailDraft;
 window.savePassword = savePassword;
 window.showSuccessModal = showSuccessModal;
 window.closeSuccessModal = closeSuccessModal;
+window.toggleCustomDropdown = toggleCustomDropdown;
+window.selectCustomOption = selectCustomOption;
+window.goToStep = goToStep;
+window.changeStep = changeStep;
+window.showStep = showStep;
+
+window.clearSignature = function() { console.log("Clear signature placeholder executed."); };
+window.resizeCanvas = function() { console.log("Resize canvas placeholder executed."); };
 
 // --- Auto-bind simple input listeners on DOMContentLoaded to detect changes ---
 document.addEventListener('DOMContentLoaded', () => {
@@ -717,4 +880,99 @@ document.addEventListener('DOMContentLoaded', () => {
         // initial check to ensure action bar hidden/shown correctly
         checkForChanges();
     }
+
+    window.addEventListener('resize', () => {
+        if(typeof window.resizeCanvas === 'function') window.resizeCanvas();
+    });
 });
+
+function initSignaturePad() {
+    const canvas = document.getElementById('signature-pad');
+    
+    // If canvas doesn't exist (e.g., tab loaded but some error occurred), stop.
+    if (!canvas) return; 
+
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
+
+    // Define the resize function globally so showStep() can call it
+    window.resizeCanvas = function() {
+        // Only resize if the canvas is actually visible to avoid 0 height issues
+        if (canvas.offsetParent === null) return; 
+        
+        const rect = canvas.getBoundingClientRect();
+        // Set actual size in memory (scaled for high DPI screens)
+        canvas.width = rect.width * 2; 
+        canvas.height = rect.height * 2;
+        ctx.scale(2, 2);
+        
+        // Reset context properties after resize
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = "#000";
+        ctx.lineWidth = 2;
+    };
+
+    function draw(e) {
+        if (!isDrawing) return;
+        
+        const rect = canvas.getBoundingClientRect();
+        let clientX, clientY;
+        
+        if (e.type.includes('touch')) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+        
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
+
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        [lastX, lastY] = [x, y];
+    }
+
+    // Remove old listeners to prevent duplicates if tab is reloaded
+    // (Cloning the node is a quick hack to wipe listeners, or just leave as is if simple)
+    // For simplicity, we just add them. 
+
+    canvas.addEventListener('mousedown', (e) => {
+        isDrawing = true;
+        const rect = canvas.getBoundingClientRect();
+        [lastX, lastY] = [e.clientX - rect.left, e.clientY - rect.top];
+    });
+
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        isDrawing = true;
+        const rect = canvas.getBoundingClientRect();
+        [lastX, lastY] = [e.touches[0].clientX - rect.left, e.touches[0].clientY - rect.top];
+    });
+
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); });
+
+    canvas.addEventListener('mouseup', () => isDrawing = false);
+    canvas.addEventListener('mouseout', () => isDrawing = false);
+    canvas.addEventListener('touchend', () => isDrawing = false);
+
+    // Global clear function
+    window.clearSignature = function() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+}
+
+function submitApplication() {
+    const reloadPage = function() {
+        location.reload();
+    };
+    
+    showSuccessModal('Submission Successful', 'Your form has been submitted.', undefined, reloadPage);
+}

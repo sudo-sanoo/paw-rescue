@@ -21,8 +21,8 @@ $user = $result->fetch_assoc();
 $full_name = $user['full_name'];
 
 $role_map = [
-    'user'       => 'Member',
-    'volunteer'    => 'Volunteer',
+    'user'       => 'Community Member',
+    'volunteer'    => 'Community Volunteer',
     'veterinarian' => 'Veterinarian System Administrator',
 ];
 $role_identifier = $user['role'] ?? 'user';
@@ -92,22 +92,30 @@ $initials = getInitials($user['full_name']);
                     <i data-lucide="layout-dashboard" class="w-5 h-5 shrink-0"></i>
                     <span>Home</span>
                 </button>
-                <button onclick="switchTab('animals')" id="nav-animals" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900">
-                    <i data-lucide="dog" class="w-5 h-5 shrink-0"></i>
-                    <span>Animals</span>
+                <!-- 2. Report Emergency (Highlighted) -->
+                <button onclick="switchTab('report')" id="nav-report" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900 group">
+                    <div class="bg-red-100 text-red-500 p-1.4 rounded-md group-hover:bg-red-500 group-hover:text-white transition-colors">
+                        <i data-lucide="siren" class="w-4 h-4 shrink-0"></i>
+                    </div>
+                    <span class="font-semibold text-gray-700 group-hover:text-red-600">Report Emergency</span>
                 </button>
-                <button onclick="switchTab('report')" id="nav-report" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900">
-                    <i data-lucide="file-text" class="w-5 h-5 shrink-0"></i>
-                    <span>Reports</span>
+                <!-- 3. My Reports (Activity) -->
+                <button onclick="switchTab('activity')" id="nav-activity" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                    <i data-lucide="activity" class="w-5 h-5 shrink-0"></i>
+                    <span>My Reports</span>
                 </button>
-                <button onclick="switchTab('volunteers')" id="nav-volunteers" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900">
-                    <i data-lucide="users" class="w-5 h-5 shrink-0"></i>
-                    <span>Volunteers</span>
+                <!-- 4. Adopt -->
+                <button onclick="switchTab('adopt')" id="nav-adopt" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                    <i data-lucide="heart-handshake" class="w-5 h-5 shrink-0"></i>
+                    <span>Adopt</span>
                 </button>
-                <button onclick="switchTab('schedule')" id="nav-schedule" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900">
-                    <i data-lucide="calendar" class="w-5 h-5 shrink-0"></i>
-                    <span>Schedule</span>
+                <!-- 5. Become Volunteer -->
+                <?php if ($role_identifier === 'user'): ?>
+                <button onclick="switchTab('join')" id="nav-join" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                    <i data-lucide="medal" class="w-5 h-5 shrink-0"></i>
+                    <span>Become a Hero</span>
                 </button>
+                <?php endif; ?>
             </nav>
 
             <!-- Bottom Actions -->
@@ -134,10 +142,7 @@ $initials = getInitials($user['full_name']);
                         <button onclick="toggleDesktopSidebar()" class="hidden lg:block text-gray-400 hover:text-gray-600 hover:bg-gray-50 p-1.5 rounded-lg transition-colors" title="Toggle Sidebar">
                             <i data-lucide="menu" class="w-6 h-6"></i>
                         </button>
-                        <div class="relative w-full max-w-md hidden md:block">
-                            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5"></i>
-                            <input type="text" placeholder="Search for animals, volunteers..." class="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-100 focus:border-orange-300 text-sm transition-all" />
-                        </div>
+                        <h2 id="page-title" class="text-lg font-bold text-gray-800 ml-2">Home</h2>
                     </div>
 
                     <!-- Right Side Actions -->
@@ -167,155 +172,76 @@ $initials = getInitials($user['full_name']);
             </header>
 
             <!-- Scrollable Content Area -->
-            <main class="flex-1 overflow-y-auto bg-gray-50 p-6">
+            <main class="flex-1 overflow-y-auto bg-gray-50 p-6 relative">
                 <div id="page-content">
-                    <!-- VIEW: Dashboard -->
-                    <div id="view-dashboard" class="space-y-8 animate-fade-in">
-                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
-                                <h1 class="text-2xl font-bold text-gray-800">Welcome back, <?php echo htmlspecialchars($full_name); ?>!</h1>
-                                <p class="text-gray-500">Here's what's happening at PawRescue today.</p>
+                    <!-- VIEW: Home (Feed & Impact) -->
+                    <div id="view-home" class="animate-fade-in space-y-8">
+                        <!-- Hero Section -->
+                        <div class="bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl p-8 text-white shadow-lg relative overflow-hidden">
+                            <div class="relative z-10 max-w-lg">
+                                <h1 class="text-3xl font-bold mb-2">Every Second Counts</h1>
+                                <p class="text-orange-50 mb-6">You are the eyes and ears of the rescue team. If you see an animal in distress, report it immediately.</p>
+                                <button onclick="switchTab('report')" class="bg-white text-orange-600 px-6 py-3 rounded-xl font-bold shadow-md hover:bg-gray-100 transition-transform hover:scale-105 flex items-center gap-2">
+                                    <i data-lucide="siren" class="w-5 h-5 text-red-500"></i>
+                                    Report Emergency
+                                </button>
                             </div>
-                            <button class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium shadow-sm transition-colors flex items-center gap-2">
-                                <i data-lucide="heart" class="w-4 h-4"></i>
-                                <span>New Intake</span>
-                            </button>
+                            <i class="fa-solid fa-dog absolute -bottom-4 -right-4 text-9xl text-white opacity-10 rotate-12"></i>
                         </div>
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-                                <div><p class="text-sm text-gray-500 font-medium">Animals in Care</p><h3 class="text-2xl font-bold text-gray-800 mt-1">42</h3></div>
-                                <div class="p-3 rounded-full bg-orange-100 text-orange-600"><i data-lucide="dog" class="w-6 h-6"></i></div>
-                            </div>
-                            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-                                <div><p class="text-sm text-gray-500 font-medium">Pending Adoptions</p><h3 class="text-2xl font-bold text-gray-800 mt-1">15</h3></div>
-                                <div class="p-3 rounded-full bg-blue-100 text-blue-600"><i data-lucide="file-text" class="w-6 h-6"></i></div>
-                            </div>
-                            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-                                <div><p class="text-sm text-gray-500 font-medium">Volunteers Active</p><h3 class="text-2xl font-bold text-gray-800 mt-1">28</h3></div>
-                                <div class="p-3 rounded-full bg-green-100 text-green-600"><i data-lucide="users" class="w-6 h-6"></i></div>
-                            </div>
-                            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-                                <div><p class="text-sm text-gray-500 font-medium">Urgent Cases</p><h3 class="text-2xl font-bold text-gray-800 mt-1">3</h3></div>
-                                <div class="p-3 rounded-full bg-red-100 text-red-600"><i data-lucide="clock" class="w-6 h-6"></i></div>
-                            </div>
-                        </div>
-                        
-                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                            <div class="lg:col-span-2 space-y-8">
-                                <!-- Recent Animals Section -->
-                                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                                    <div class="flex items-center justify-between mb-6">
-                                        <h2 class="text-lg font-bold text-gray-800">New Arrivals</h2>
-                                        <a href="#" onclick="switchTab('animals')" class="text-orange-600 text-sm font-medium hover:text-orange-700 flex items-center gap-1">
-                                            View all <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                                        </a>
-                                    </div>
-                                    <div class="grid gap-4">
-                                        <!-- Animal Item 1 -->
-                                        <div class="flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
-                                            <img src="https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=150&q=80" alt="Barnaby" class="w-16 h-16 rounded-lg object-cover group-hover:scale-105 transition-transform">
-                                            <div class="flex-1">
-                                                <div class="flex justify-between items-start">
-                                                    <h4 class="font-bold text-gray-800">Barnaby</h4>
-                                                    <span class="text-xs px-2 py-1 rounded-full font-medium bg-green-100 text-green-700">Available</span>
-                                                </div>
-                                                <p class="text-sm text-gray-500">Golden Retriever • Dog</p>
-                                            </div>
-                                        </div>
-                                        <!-- Animal Item 2 -->
-                                        <div class="flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
-                                            <img src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=150&q=80" alt="Mittens" class="w-16 h-16 rounded-lg object-cover group-hover:scale-105 transition-transform">
-                                            <div class="flex-1">
-                                                <div class="flex justify-between items-start">
-                                                    <h4 class="font-bold text-gray-800">Mittens</h4>
-                                                    <span class="text-xs px-2 py-1 rounded-full font-medium bg-blue-100 text-blue-700">Pending</span>
-                                                </div>
-                                                <p class="text-sm text-gray-500">Tabby • Cat</p>
-                                            </div>
-                                        </div>
-                                        <!-- Animal Item 3 -->
-                                        <div class="flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
-                                            <img src="https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&w=150&q=80" alt="Rocky" class="w-16 h-16 rounded-lg object-cover group-hover:scale-105 transition-transform">
-                                            <div class="flex-1">
-                                                <div class="flex justify-between items-start">
-                                                    <h4 class="font-bold text-gray-800">Rocky</h4>
-                                                    <span class="text-xs px-2 py-1 rounded-full font-medium bg-orange-100 text-orange-700">Medical Hold</span>
-                                                </div>
-                                                <p class="text-sm text-gray-500">Bulldog Mix • Dog</p>
-                                            </div>
+                        <!-- Recent Success Stories -->
+                        <div>
+                            <div class="flex items-center justify-between mb-4">
+                                <h3 class="text-lg font-bold text-gray-800">Community Impact</h3>
+                                <!-- Custom Dropdown: Home Stats -->
+                                <div class="relative custom-dropdown-container">
+                                    <button onclick="toggleCustomDropdown('home-stats')" class="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg px-4 py-2 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm focus:ring-2 focus:ring-orange-100">
+                                        <span id="home-stats-label">Today</span>
+                                        <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400"></i>
+                                    </button>
+                                    <!-- Dropdown Menu -->
+                                    <div id="home-stats-menu" class="custom-dropdown-menu hidden absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden dropdown-enter z-50">
+                                        <div class="p-1">
+                                            <button onclick="selectCustomOption('home-stats', 'today', 'Today')" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 rounded-lg transition-colors flex items-center justify-between group">
+                                                Today
+                                            </button>
+                                            <button onclick="selectCustomOption('home-stats', '3days', 'Past 3 Days')" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 rounded-lg transition-colors flex items-center justify-between group">
+                                                Past 3 Days
+                                            </button>
+                                            <button onclick="selectCustomOption('home-stats', 'week', 'This Week')" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 rounded-lg transition-colors flex items-center justify-between group">
+                                                This Week
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
-                                <!-- Adoption Applications Table -->
-                                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                                    <div class="flex items-center justify-between mb-6">
-                                        <h2 class="text-lg font-bold text-gray-800">Recent Applications</h2>
-                                    </div>
-                                    <div class="overflow-x-auto">
-                                        <table class="w-full text-left">
-                                            <thead>
-                                                <tr class="border-b border-gray-100 text-gray-400 text-sm">
-                                                    <th class="pb-3 font-medium">Applicant</th>
-                                                    <th class="pb-3 font-medium">Animal</th>
-                                                    <th class="pb-3 font-medium">Status</th>
-                                                    <th class="pb-3 font-medium text-right">Date</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="text-sm">
-                                                <!-- Row 1 -->
-                                                <tr class="border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors">
-                                                    <td class="py-4 font-medium text-gray-800">Sarah Jenkins</td>
-                                                    <td class="py-4 text-gray-600">Barnaby</td>
-                                                    <td class="py-4">
-                                                        <span class="px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-700">Under Review</span>
-                                                    </td>
-                                                    <td class="py-4 text-right text-gray-500">2 hrs ago</td>
-                                                </tr>
-                                                <!-- Row 2 -->
-                                                <tr class="border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors">
-                                                    <td class="py-4 font-medium text-gray-800">Mike Ross</td>
-                                                    <td class="py-4 text-gray-600">Bella</td>
-                                                    <td class="py-4">
-                                                        <span class="px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-700">Approved</span>
-                                                    </td>
-                                                    <td class="py-4 text-right text-gray-500">1 day ago</td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
                             </div>
-                            <div class="space-y-8">
-                                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                                    <div class="flex items-center justify-between mb-6">
-                                        <h2 class="text-lg font-bold text-gray-800">Today's Tasks</h2>
-                                        <button class="text-gray-400 hover:text-gray-600"><i data-lucide="calendar" class="w-5 h-5"></i></button>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <!-- Story 1 -->
+                                <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col">
+                                    <img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=500&q=60" class="w-full h-40 object-cover rounded-lg mb-4" alt="Rescued Dog">
+                                    <h4 class="font-bold text-gray-800">Luna found a home!</h4>
+                                    <p class="text-sm text-gray-500 mt-1 line-clamp-2">Thanks to a report by user @sarah, Luna was treated for a broken leg and adopted yesterday.</p>
+                                    <div class="mt-auto pt-4 flex items-center gap-2 text-xs font-medium text-green-600">
+                                        <i data-lucide="check-circle" class="w-4 h-4"></i> Rescued & Adopted
                                     </div>
-                                    <div class="space-y-4">
-                                        <div class="flex items-start gap-3">
-                                            <button class="mt-1 flex-shrink-0 w-5 h-5 rounded border border-gray-300"></button>
-                                            <div><p class="text-sm font-medium text-gray-800">Vet Visit: Luna</p><span class="text-xs text-gray-400">10:00 AM</span></div>
-                                        </div>
-                                        <div class="flex items-start gap-3">
-                                            <button class="mt-1 flex-shrink-0 w-5 h-5 rounded border border-gray-300"></button>
-                                            <div><p class="text-sm font-medium text-gray-800">Foster Home Check</p><span class="text-xs text-gray-400">2:00 PM</span></div>
-                                        </div>
-                                    </div>
-                                    <button class="w-full mt-6 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">Add New Task</button>
                                 </div>
-
-                                <!-- Quick Volunteer Status -->
-                                <div class="bg-orange-500 p-6 rounded-xl text-white shadow-lg relative overflow-hidden group">
-                                    <div class="relative z-10">
-                                        <h3 class="font-bold text-lg mb-1">Need Help?</h3>
-                                        <p class="text-orange-100 text-sm mb-4">You have 5 volunteers available for transport right now.</p>
-                                        <button class="bg-white text-orange-600 px-4 py-2 rounded-lg text-sm font-bold shadow-sm hover:bg-orange-50 transition-colors">
-                                            Alert Team
-                                        </button>
+                                <!-- Story 2 -->
+                                <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col">
+                                    <img src="https://images.unsplash.com/photo-1573865526739-10659fec78a5?auto=format&fit=crop&w=500&q=60" class="w-full h-40 object-cover rounded-lg mb-4" alt="Rescued Cat">
+                                    <h4 class="font-bold text-gray-800">Kitten Rescue</h4>
+                                    <p class="text-sm text-gray-500 mt-1 line-clamp-2">A litter of kittens stuck in a drain was successfully rescued by our volunteer team.</p>
+                                    <div class="mt-auto pt-4 flex items-center gap-2 text-xs font-medium text-blue-600">
+                                        <i data-lucide="shield" class="w-4 h-4"></i> Safe at Shelter
                                     </div>
-                                    <div class="absolute -bottom-4 -right-4 opacity-20 transform rotate-12 group-hover:scale-110 transition-transform duration-500">
-                                        <i data-lucide="users" class="w-24 h-24"></i>
+                                </div>
+                                <!-- Stats -->
+                                <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center text-center space-y-4">
+                                    <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center text-orange-600">
+                                        <i data-lucide="activity" class="w-8 h-8"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-3xl font-bold text-gray-800">124</h4>
+                                        <p class="text-sm text-gray-500">Animals saved this month</p>
                                     </div>
                                 </div>
                             </div>

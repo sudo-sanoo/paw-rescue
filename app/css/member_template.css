@@ -13,6 +13,10 @@
     background: #94a3b8; 
 }
 
+body {
+    user-select: none;
+}
+
 .hide-scrollbar::-webkit-scrollbar {
     display: none;
 }
@@ -40,3 +44,10 @@
 .cropper-face {
     border-radius: 0; 
 }
+
+.animate-fade-in { animation: fadeIn 0.4s ease-in-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Step Progress for My Activity */
+.step-connector { position: absolute; top: 2rem; bottom: 0; left: 1rem; width: 2px; background-color: #e5e7eb; z-index: 0; }
+.step-item:last-child .step-connector { display: none; }
