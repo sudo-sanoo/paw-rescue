@@ -21,8 +21,8 @@ $user_id = $user['user_id'] ?? $user_id;
 $full_name = $user['full_name'] ?? '';
 
 $role_map = [
-    'user'       => 'Member',
-    'volunteer'    => 'Volunteer',
+    'user'       => 'Community Volunteer',
+    'volunteer'    => 'Community Rescuer',
     'veterinarian' => 'Veterinarian System Administrator',
 ];
 $role_identifier = $user['role'] ?? 'user';
@@ -151,7 +151,7 @@ $initials = getInitials($full_name);
                 <div class="flex items-center justify-between py-2 border-b border-gray-50">
                     <div><p class="font-medium text-gray-800">Email Address</p><p class="text-sm text-gray-500">Manage your connected email.</p></div>
                     <button id="security-email-btn" onclick="openModal('email-modal')" class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors">
-                        <?php echo $has_email ? 'Change' : 'Add'; ?>
+                        <?php echo $has_email ? 'Change' : '&nbsp;&nbsp;&nbsp;Add&nbsp;&nbsp;&nbsp;'; ?>
                     </button>
                 </div>
                 <!-- Change Password -->

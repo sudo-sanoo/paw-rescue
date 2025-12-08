@@ -370,7 +370,7 @@ const tabTitles = {
     'report':    'Report Emergency',
     'activity':  'My Reports',
     'adopt':     'Adopt an Animal',
-    'join':      'Volunteer Application',
+    'join':      'Rescuer Application',
     'settings':  'Settings',
 };
 
@@ -969,10 +969,71 @@ function initSignaturePad() {
     }
 }
 
+function openLegalModal() {
+    const legalModal = document.getElementById('legal-modal');
+    if (!legalModal) return;
+    
+    legalModal.classList.remove('hidden');
+    // Prevent body background from scrolling
+    document.body.style.overflow = 'hidden';
+    
+    // Small delay to allow display:block to apply before opacity transition
+    setTimeout(() => {
+        legalModal.classList.remove('opacity-0');
+        const innerDiv = legalModal.querySelector('div');
+        if(innerDiv) {
+            innerDiv.classList.remove('scale-95');
+            innerDiv.classList.add('scale-100');
+        }
+    }, 10);
+}
+
+function closeLegalModal() {
+    const legalModal = document.getElementById('legal-modal');
+    if (!legalModal) return;
+
+    legalModal.classList.add('opacity-0');
+    const innerDiv = legalModal.querySelector('div');
+    if(innerDiv) {
+        innerDiv.classList.remove('scale-100');
+        innerDiv.classList.add('scale-95');
+    }
+    
+    setTimeout(() => {
+        legalModal.classList.add('hidden');
+        // Re-enable body scrolling
+        document.body.style.overflow = '';
+        resetLegalForm();
+    }, 300);
+}
+
+function toggleSubmitButton() {
+    const checkbox = document.getElementById('confirm-checkbox');
+    const submitBtn = document.getElementById('submit-btn');
+    if (!checkbox || !submitBtn) return;
+
+    if (checkbox.checked) {
+        submitBtn.disabled = false;
+        submitBtn.classList.remove('opacity-50', 'cursor-not-allowed', 'bg-gray-400');
+    } else {
+        submitBtn.disabled = true;
+        submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+    }
+}
+
+function resetLegalForm() {
+    const checkbox = document.getElementById('confirm-checkbox');
+    if (checkbox) {
+        checkbox.checked = false;
+        toggleSubmitButton();
+    }
+}
+
 function submitApplication() {
     const reloadPage = function() {
         location.reload();
     };
     
+    closeLegalModal()
     showSuccessModal('Submission Successful', 'Your form has been submitted.', undefined, reloadPage);
 }

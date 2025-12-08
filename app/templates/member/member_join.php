@@ -61,31 +61,31 @@ requireRole(['user']);
             <div class="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-6">
                 <p class="text-sm text-blue-800 flex gap-2">
                     <i data-lucide="info" class="w-4 h-4 mt-0.5 shrink-0"></i>
-                    Please provide a clear photo of your Malaysian Identity Card (IC). This information is encrypted and used solely for identity verification.
+                    Please provide a clear photo of your Malaysian Identity Card (MyKad). This information is encrypted and used solely for identity verification.
                 </p>
             </div>
 
             <div class="grid md:grid-cols-2 gap-8">
                 <!-- Front IC -->
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">IC (Front)</label>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">MyKad (Front)</label>
                     <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:bg-gray-50 transition-colors cursor-pointer group">
                         <div class="w-16 h-12 bg-gray-200 rounded mx-auto mb-3 flex items-center justify-center text-gray-400 group-hover:text-blue-500">
                             <i data-lucide="image" class="w-6 h-6"></i>
                         </div>
-                        <p class="text-sm font-medium text-blue-600">Identity Card Front</p>
-                        <p class="text-xs text-gray-400 mt-1">Place the front of your IC in the box.</p>
+                        <p class="text-sm font-medium text-blue-600">MyKad Front</p>
+                        <p class="text-xs text-gray-400 mt-1">Place the front of your MyKad in the box.</p>
                     </div>
                 </div>
                 <!-- Back IC -->
                 <div>
-                    <label class="block text-sm font-bold text-gray-700 mb-2">IC (Back)</label>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">MyKad (Back)</label>
                     <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:bg-gray-50 transition-colors cursor-pointer group">
                         <div class="w-16 h-12 bg-gray-200 rounded mx-auto mb-3 flex items-center justify-center text-gray-400 group-hover:text-blue-500">
                             <i data-lucide="image" class="w-6 h-6"></i>
                         </div>
-                        <p class="text-sm font-medium text-blue-600">Identity Card Back</p>
-                        <p class="text-xs text-gray-400 mt-1">Place the back of your IC in the box.</p>
+                        <p class="text-sm font-medium text-blue-600">MyKad Back</p>
+                        <p class="text-xs text-gray-400 mt-1">Place the back of your MyKad in the box.</p>
                     </div>
                 </div>
             </div>
@@ -191,25 +191,12 @@ requireRole(['user']);
 
             <!-- Upload License -->
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Upload Driver's License (Optional)</label>
-                <div class="grid md:grid-cols-2 gap-6">
-                    <!-- Front DL -->
-                    <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:bg-gray-50 transition-colors cursor-pointer group">
-                        <div class="w-12 h-10 bg-gray-100 rounded mx-auto mb-2 flex items-center justify-center text-gray-400 group-hover:text-green-600">
-                            <i data-lucide="image" class="w-5 h-5"></i>
-                        </div>
-                        <p class="text-xs font-bold text-blue-600">Driver's License Front</p>
-                        <p class="text-[10px] text-gray-400 mt-0.5">Place the front of your License in the box.</p>
-                    </div>
-                    <!-- Back DL -->
-                    <div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:bg-gray-50 transition-colors cursor-pointer group">
-                        <div class="w-12 h-10 bg-gray-100 rounded mx-auto mb-2 flex items-center justify-center text-gray-400 group-hover:text-green-600">
-                            <i data-lucide="image" class="w-5 h-5"></i>
-                        </div>
-                        <p class="text-xs font-bold text-blue-600">Driver's License Back</p>
-                        <p class="text-[10px] text-gray-400 mt-0.5">Place the back of your License in the box.</p>
-                    </div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Upload Driver's License / Digital Copy (Required)</label>
+                <div class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
+                    <button class="px-4 py-2 bg-white border border-gray-300 rounded text-sm font-medium hover:bg-gray-100">Choose File</button>
+                    <span class="text-sm text-gray-500 italic">No file chosen</span>
                 </div>
+                <p class="text-xs text-gray-400 mt-1">Accepts screenshots from MyJPJ app or PDF exports.</p>
             </div>
 
             <!-- Experience -->
@@ -278,7 +265,7 @@ requireRole(['user']);
                 <span>Next Step</span>
                 <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </button>
-            <button id="btn-submit" type="button" onclick="submitApplication()" class="hidden px-8 py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-bold shadow-lg transition-transform active:scale-95 flex items-center gap-2">
+            <button id="btn-submit" type="button" onclick="openLegalModal()" class="hidden px-8 py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-bold shadow-lg transition-transform active:scale-95 flex items-center gap-2">
                 <span>Submit Application</span>
                 <i data-lucide="check" class="w-4 h-4"></i>
             </button>

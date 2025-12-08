@@ -21,8 +21,8 @@ $user = $result->fetch_assoc();
 $full_name = $user['full_name'];
 
 $role_map = [
-    'user'       => 'Community Member',
-    'volunteer'    => 'Community Volunteer',
+    'user'       => 'Community Volunteer',
+    'volunteer'    => 'Community Rescuer',
     'veterinarian' => 'Veterinarian System Administrator',
 ];
 $role_identifier = $user['role'] ?? 'user';
@@ -180,7 +180,7 @@ $initials = getInitials($user['full_name']);
                         <div class="bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl p-8 text-white shadow-lg relative overflow-hidden">
                             <div class="relative z-10 max-w-lg">
                                 <h1 class="text-3xl font-bold mb-2">Every Second Counts</h1>
-                                <p class="text-orange-50 mb-6">You are the eyes and ears of the rescue team. If you see an animal in distress, report it immediately.</p>
+                                <p class="text-orange-50 mb-6">If you see an animal in distress, report it immediately. You are the eyes and ears of the rescue team.</p>
                                 <button onclick="switchTab('report')" class="bg-white text-orange-600 px-6 py-3 rounded-xl font-bold shadow-md hover:bg-gray-100 transition-transform hover:scale-105 flex items-center gap-2">
                                     <i data-lucide="siren" class="w-5 h-5 text-red-500"></i>
                                     Report Emergency
@@ -402,6 +402,71 @@ $initials = getInitials($user['full_name']);
                 <p id="modal-message" class="text-gray-600 mb-6">Action completed successfully.</p>
                 <button onclick="closeSuccessModal()" class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-lg transition shadow-md">
                     Got it
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LEGAL MODAL (Volunteer Application) -->
+    <div id="legal-modal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden flex items-center justify-center z-[100] p-4 backdrop-blur-sm transition-opacity duration-300 opacity-0">
+        <div class="bg-white rounded-none md:rounded-xl shadow-2xl max-w-lg w-full transform scale-95 transition-all duration-300 flex flex-col" onclick="event.stopPropagation()">
+            <div class="bg-orange-50 px-8 py-6 border-b border-orange-100 flex items-center justify-between rounded-t-xl">
+                <div class="flex items-center gap-3">
+                    <div class="bg-white p-2.5 rounded-full border border-orange-200 shadow-sm">
+                        <i class="fa-solid fa-shield-dog text-orange-500 text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800 tracking-tight">Rescuer Application Affidavit</h3>
+                        <p class="text-xs text-orange-600 font-medium">PawRescue Official Protocol</p>
+                    </div>
+                </div>
+                <button onclick="closeLegalModal()" class="text-gray-400 hover:text-orange-500 transition">
+                    <i class="fa-solid fa-times text-lg"></i>
+                </button>
+            </div>
+            <div class="p-8">
+                <p class="text-sm text-gray-600 mb-4 leading-relaxed">
+                    You are applying to become a <strong>Volunteer Rescuer</strong>. This role grants you the authority to assist vulnerable animals in emergency situations.
+                </p>
+                <p class="text-sm text-gray-600 mb-6 leading-relaxed">
+                    By proceeding, you explicitly consent to the necessary <strong>verification checks and background screenings</strong> required to ensure the safety and integrity of our rescue operations.
+                </p>
+
+                <div class="bg-orange-50 border-l-4 border-orange-400 p-4 mb-6 rounded-r-lg shadow-sm">
+                    <h4 class="text-orange-800 font-bold text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
+                        <i class="fa-solid fa-circle-info"></i> Information Attestation
+                    </h4>
+                    <p class="text-xs text-gray-700 mb-2 font-medium">
+                        PawRescue relies on the honesty of our volunteers. Please ensure all submitted details are current and accurate. Fraudulent submissions may result in:
+                    </p>
+                    <ul class="list-disc pl-4 space-y-1 text-xs text-gray-600">
+                        <li>Denial of the rescuer application.</li>
+                        <li>Temporary suspension of account privileges.</li>
+                        <li>Removal from the rescuer registry.</li>
+                        <li>Potential legal action and treated as attempted endangerment of animals.</li>
+                    </ul>
+                </div>
+                
+                <div class="flex items-start gap-3 mt-2 group p-3 rounded-lg hover:bg-orange-50 transition-colors">
+                    <div class="flex items-center h-5 mt-0.5">
+                        <input id="confirm-checkbox" type="checkbox" onchange="toggleSubmitButton()" class="w-5 h-5 text-orange-500 border-gray-300 rounded focus:ring-orange-500 cursor-pointer accent-orange-500">
+                    </div>
+                    <div class="ml-1 text-sm">
+                        <label for="confirm-checkbox" class="font-bold text-gray-800 cursor-pointer select-none">
+                            I certify that all submitted proofs are authentic.
+                        </label>
+                        <p class="text-xs text-gray-500 mt-1">
+                            I confirm the validity of my documents and agree to the Terms of Service.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-gray-50 px-8 py-5 border-t border-gray-200 flex justify-end gap-3 rounded-b-xl">
+                <button onclick="closeLegalModal()" class="px-5 py-2.5 bg-white text-gray-600 text-sm font-bold border border-gray-300 rounded-lg hover:bg-gray-100 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-200 transition-colors">
+                    Cancel
+                </button>
+                <button id="submit-btn" type="button" onclick="submitApplication()" disabled class="px-5 py-2.5 bg-orange-500 text-white text-sm font-bold rounded-lg shadow-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-file-signature"></i> Confirm & Submit
                 </button>
             </div>
         </div>
