@@ -693,6 +693,11 @@ function showSuccessModal(title, message, iconClass = 'fa-solid fa-check-circle 
     modal.classList.add('flex');
 }
 
+// showsucessmodal wrapper for errors
+function showErrorModal(title, message) {
+    showSuccessModal(title, message, 'fa-solid fa-circle-xmark text-red-500');
+}
+
 function closeSuccessModal() {
     ensureModalRefs();
     if (!modal) return;
@@ -726,6 +731,10 @@ function selectCustomOption(dropdownId, value, label) {
     const labelEl = document.getElementById(dropdownId + '-label');
     if(labelEl) labelEl.innerText = label;
 
+    // Update the Hidden Input Value (Data)
+    const inputEl = document.getElementById(dropdownId + '-value');
+    if(inputEl) inputEl.value = value;
+
     // Close Menu
     const menu = document.getElementById(dropdownId + '-menu');
     menu.classList.add('hidden');
@@ -749,8 +758,69 @@ function goToStep(step) {
     showStep(step);
 }
 
+function validateStep(step) {
+    // --- STEP 1 VALIDATION: MyKad ---
+    if (step === 1) {
+        const frontVal = document.getElementById('mykad_front_base64').value;
+        const backVal = document.getElementById('mykad_back_base64').value;
+
+        if (!frontVal || !backVal) {
+            showErrorModal("Step 1 Incomplete", "Please capture both Front and Back photos of your MyKad before proceeding.");
+            return false;
+        }
+    }
+
+    // --- STEP 2 VALIDATION: Legal ---
+    if (step === 2) {
+        // 1. Check Background Consent
+        const consent = document.querySelector('input[name="has_background_check_consent"]:checked');
+        if (!consent) {
+            showErrorModal("Step 2 Incomplete", "Please indicate if you consent to a background check.");
+            return false;
+        }
+
+        // 2. Check Prior Conviction
+        const conviction = document.querySelector('input[name="has_prior_conviction"]:checked');
+        if (!conviction) {
+            showErrorModal("Step 2 Incomplete", "Please indicate if you have any prior convictions.");
+            return false;
+        }
+
+        // 3. Conditional: If "Yes" is selected, details are mandatory
+        if (conviction.value === "1") {
+            const details = document.getElementById('conviction-text').value.trim();
+            if (!details) {
+                showErrorModal("Details Required", "Since you selected 'Yes' for prior convictions, you must provide details.");
+                return false;
+            }
+        }
+    }
+
+    // --- STEP 3 VALIDATION: Qualifications ---
+    if (step === 3) {
+        // Check File Inputs (checking .files.length)
+        const frontFile = document.getElementById('license-front').files.length;
+        const backFile = document.getElementById('license-back').files.length;
+
+        if (frontFile === 0 || backFile === 0) {
+            showErrorModal("Step 3 Incomplete", "Please upload both the Front and Back of your Driver's License.");
+            return false;
+        }
+    }
+
+    return true;
+}
+
 function changeStep(direction) {
+    if (direction === 1) {
+        // Run validation on the CURRENT step before allowing move
+        if (!validateStep(currentStep)) {
+            return; // Stop here. Do not proceed.
+        }
+    }
+
     const newStep = currentStep + direction;
+    
     if (newStep >= 1 && newStep <= 4) {
         showStep(newStep);
     }
@@ -888,12 +958,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initSignaturePad() {
     const canvas = document.getElementById('signature-pad');
+    const hiddenInput = document.getElementById('signature_base64');
     
     // If canvas doesn't exist (e.g., tab loaded but some error occurred), stop.
     if (!canvas) return; 
 
     const ctx = canvas.getContext('2d');
     let isDrawing = false;
+    let hasSigned = false;
     let lastX = 0;
     let lastY = 0;
 
@@ -915,8 +987,18 @@ function initSignaturePad() {
         ctx.lineWidth = 2;
     };
 
+    function saveSignature() {
+        if (hasSigned) {
+            hiddenInput.value = canvas.toDataURL('image/png');
+        } else {
+            hiddenInput.value = "";
+        }
+    }
+
     function draw(e) {
         if (!isDrawing) return;
+
+        hasSigned = true;
         
         const rect = canvas.getBoundingClientRect();
         let clientX, clientY;
@@ -959,13 +1041,34 @@ function initSignaturePad() {
     canvas.addEventListener('mousemove', draw);
     canvas.addEventListener('touchmove', (e) => { e.preventDefault(); draw(e); });
 
-    canvas.addEventListener('mouseup', () => isDrawing = false);
-    canvas.addEventListener('mouseout', () => isDrawing = false);
-    canvas.addEventListener('touchend', () => isDrawing = false);
+    // On end of drawing, save data to hidden input
+    canvas.addEventListener('mouseup', () => { isDrawing = false; saveSignature(); });
+    canvas.addEventListener('mouseout', () => { isDrawing = false; saveSignature(); });
+    canvas.addEventListener('touchend', () => {
+        isDrawing = false; 
+        saveSignature();
+        // console.log("saved") // for debuging 
+    });
 
     // Global clear function
     window.clearSignature = function() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        hiddenInput.value = '';
+        hasSigned = false;
+        // console.log("cleared") // just for debugging
+    }
+}
+
+function updateFileName(input, displayId) {
+    const displayElement = document.getElementById(displayId);
+    if (input.files && input.files.length > 0) {
+        displayElement.textContent = input.files[0].name;
+        displayElement.classList.remove('italic', 'text-gray-500');
+        displayElement.classList.add('text-gray-800');
+    } else {
+        displayElement.textContent = "No file chosen";
+        displayElement.classList.add('italic', 'text-gray-500');
+        displayElement.classList.remove('text-gray-800');
     }
 }
 
@@ -996,6 +1099,23 @@ function updateCharCount(input, counterId, limit) {
 }
 
 function openLegalModal() {
+    // --- VALIDATION CHECKS (Step 4) ---
+    
+    // Check Signature (Hidden Input populated by canvas)
+    const signatureB64 = document.getElementById('signature_base64').value;
+    if (!signatureB64) {
+        showErrorModal("Missing Signature", "Please sign the application in the box provided before submitting.");
+        return; // STOP: Do not open the legal modal
+    }
+
+    const agree1 = document.getElementById('agreement-check-1');
+    const agree2 = document.getElementById('agreement-check-2');
+
+    if (!agree1 || !agree1.checked || !agree2 || !agree2.checked) {
+        showErrorModal("Agreement Required", "You must agree to the Code of Conduct and Reporting Clause to proceed.");
+        return;
+    }
+
     const legalModal = document.getElementById('legal-modal');
     if (!legalModal) return;
     
@@ -1057,55 +1177,98 @@ function resetLegalForm() {
 
 async function submitApplication() {
     try {
-        // close modal smoothly
-        closeLegalModal();
+        // 1. Close Modal
+        if(typeof closeLegalModal === 'function') closeLegalModal();
 
-        // Collect MyKad data captured by mykad_service.js
-        if (!window.mykadCapture || !mykadCapture.front || !mykadCapture.back) {
-            showErrorModal(
-                "Missing MyKad Images",
-                "Please capture both front and back MyKad images before submitting."
-            );
+        // 2. Retrieve Data from DOM
+        const frontB64 = document.getElementById('mykad_front_base64').value;
+        const backB64 = document.getElementById('mykad_back_base64').value;
+        const signatureB64 = document.getElementById('signature_base64').value;
+        
+        const licenseStatus = document.getElementById('license-status-value').value;
+        const vehicleAvail = document.getElementById('vehicle-availability-value').value;
+        const experience = document.getElementById('experience-text').value;
+        const certifications = document.getElementById('certifications-text').value;
+        const convictionDetails = document.getElementById('conviction-text').value;
+
+        // Get Radio Values
+        const consentEl = document.querySelector('input[name="has_background_check_consent"]:checked');
+        const consent = consentEl ? consentEl.value : "0";
+        
+        const convictionEl = document.querySelector('input[name="has_prior_conviction"]:checked');
+        const conviction = convictionEl ? convictionEl.value : "0";
+
+        // Get Standard Files
+        const licenseFrontFile = document.getElementById('license-front').files[0];
+        const licenseBackFile = document.getElementById('license-back').files[0];
+
+        // 3. Validation
+        if (!frontB64 || !backB64) {
+            showErrorModal("Missing Identity", "Please capture both front and back MyKad images.");
             return;
         }
+        if (!signatureB64) {
+            showErrorModal("Missing Signature", "Please sign the application before submitting.");
+            return;
+        }
+        if (!licenseFrontFile || !licenseBackFile) {
+             showErrorModal("Missing License", "Please upload both front and back of your driver's license.");
+             return;
+        }
 
-        // Prepare form data
+        // 4. Prepare Form Data
         const formData = new FormData();
-        formData.append("mykad_front", mykadCapture.front.blob);
-        formData.append("mykad_back", mykadCapture.back.blob);
-        formData.append("user_id", CURRENT_USER_ID); 
-        // Replace CURRENT_USER_ID via PHP echo
+        
+        // Match these keys exactly to your PHP $_POST/$_FILES lookups
+        formData.append("mykad_front_base64", frontB64);
+        formData.append("mykad_back_base64", backB64);
+        formData.append("signature_base64", signatureB64);
+        
+        formData.append("license_status", licenseStatus);
+        formData.append("vehicle_availability", vehicleAvail);
+        formData.append("animal_handling_experience", experience);
+        formData.append("training_certifications", certifications);
+        formData.append("conviction_details", convictionDetails);
+        
+        formData.append("has_background_check_consent", consent);
+        formData.append("has_prior_conviction", conviction);
+        
+        formData.append("driver_license_front", licenseFrontFile);
+        formData.append("driver_license_back", licenseBackFile);
 
-        // Add any other fields later if needed
-
-        // Upload to backend
-        const response = await fetch("/PawRescue/app/api/process_mykad.php", {
+        // 5. Send to Backend
+        const response = await fetch("../api/process_rescue_application.php", {
             method: "POST",
             body: formData
         });
 
+        // 7. Handle Response
+        // Check if response is ok (status 200-299)
+        if (!response.ok) {
+            // Try to get error text if JSON parse fails
+            const text = await response.text();
+            console.error("Server Error:", text);
+            throw new Error("Server responded with " + response.status);
+        }
+
         const result = await response.json();
 
         if (!result.success) {
-            showErrorModal("Submission Failed", result.message || "Unknown error.");
+            // Show PHP Error using our red modal
+            showErrorModal("Submission Failed", result.error || "Unknown error occurred.");
             return;
         }
 
-        // Continue your original behavior
-        const reloadPage = function() { location.reload(); };
-
+        // 8. Success!
         showSuccessModal(
-            "Submission Successful",
-            "Your form has been submitted.",
-            undefined,
-            reloadPage
+            "Application Submitted",
+            "Your application has been received and is pending review.",
+            undefined, // use default icon
+            () => window.location.reload() // Reload page on close
         );
 
     } catch (error) {
         console.error("Submit error:", error);
-        showErrorModal(
-            "Unexpected Error",
-            "Something went wrong while submitting your application."
-        );
+        showErrorModal("System Error", "A network error occurred. Please check the console.");
     }
 }

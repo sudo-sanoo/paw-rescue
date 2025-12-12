@@ -115,10 +115,24 @@ requireRole(['user']);
                 <p class="text-sm text-red-700 mb-4 leading-relaxed">
                     A mandatory field requiring agreement to a comprehensive background check (which may involve local law enforcement records and animal abuse registries).
                 </p>
-                <label class="flex items-start gap-3 cursor-pointer group p-3 bg-white rounded border border-red-100 hover:border-red-300 transition-all shadow-sm">
-                    <input type="checkbox" id="legal-consent-check" class="mt-1 w-5 h-5 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer">
-                    <span class="text-sm font-bold text-gray-800 group-hover:text-red-700">I voluntarily consent to a comprehensive criminal background check.</span>
-                </label>
+                <div>
+                    <label class="flex items-start gap-3 cursor-pointer group p-3 bg-white rounded border border-red-100 hover:border-red-300 transition-all shadow-sm">
+                        <input type="radio" 
+                                id="legal-consent-check" 
+                                name="has_background_check_consent"
+                                value="1"
+                                class="mt-1 w-5 h-5 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer">
+                        <span class="text-sm font-bold text-gray-800 group-hover:text-red-700">I voluntarily consent to a comprehensive criminal background check.</span>
+                    </label>
+                    <label class="flex items-start gap-3 cursor-pointer group p-3 bg-white rounded border border-red-100 hover:border-red-300 transition-all shadow-sm">
+                        <input type="radio" 
+                                id="legal-not-consent-check" 
+                                name="has_background_check_consent"
+                                value="0"
+                                class="mt-1 w-5 h-5 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer">
+                        <span class="text-sm font-bold text-gray-800 group-hover:text-red-700">I do not consent to a comprehensive criminal background check.</span>
+                    </label>
+                </div>
             </div>
 
             <!-- Consent 2 -->
@@ -135,11 +149,19 @@ requireRole(['user']);
                     <p class="text-sm font-bold text-gray-700">Have you ever been convicted of a crime involving animals or violence?</p>
                     <div class="flex gap-4">
                         <label class="flex items-center gap-2 cursor-pointer p-3 border rounded-lg w-full hover:bg-gray-50">
-                            <input type="radio" name="conviction" value="no" class="text-orange-600 focus:ring-orange-500" onclick="document.getElementById('conviction-details').classList.add('hidden')">
+                            <input type="radio" 
+                                    name="has_prior_conviction" 
+                                    value="0" 
+                                    class="text-orange-600 focus:ring-orange-500" 
+                                    onclick="document.getElementById('conviction-details').classList.add('hidden')">
                             <span class="text-sm font-medium">No, I have not.</span>
                         </label>
                         <label class="flex items-center gap-2 cursor-pointer p-3 border rounded-lg w-full hover:bg-gray-50">
-                            <input type="radio" name="conviction" value="yes" class="text-orange-600 focus:ring-orange-500" onclick="document.getElementById('conviction-details').classList.remove('hidden')">
+                            <input type="radio" 
+                                    name="has_prior_conviction" 
+                                    value="1" 
+                                    class="text-orange-600 focus:ring-orange-500" 
+                                    onclick="document.getElementById('conviction-details').classList.remove('hidden')">
                             <span class="text-sm font-medium">Yes, I have.</span>
                         </label>
                     </div>
@@ -149,6 +171,7 @@ requireRole(['user']);
                         <textarea 
                             id="conviction-text"
                             class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none h-32 resize-none scrollbar-thin" 
+                            name="conviction_details"
                             maxlength="300" 
                             placeholder="Provide details..."
                             oninput="updateCharCount(this, 'conviction-counter', 300)"></textarea>
@@ -184,6 +207,7 @@ requireRole(['user']);
                 <!-- Driver's License Status Dropdown -->
                 <div class="relative custom-dropdown-container">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Driver's License Status</label>
+                    <input type="hidden" id="license-status-value" name="license_status" value="full">
                     <button onclick="toggleCustomDropdown('license-status')" class="w-full flex items-center justify-between bg-white border border-gray-300 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-green-500 hover:border-gray-400 transition-colors">
                         <span id="license-status-label" class="text-gray-700">Full License (D/DA)</span>
                         <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400"></i>
@@ -201,6 +225,7 @@ requireRole(['user']);
                 <!-- Vehicle Availability Dropdown -->
                 <div class="relative custom-dropdown-container">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Vehicle Availability</label>
+                    <input type="hidden" id="vehicle-availability-value" name="vehicle_availability" value="car">
                     <button onclick="toggleCustomDropdown('vehicle-availability')" class="w-full flex items-center justify-between bg-white border border-gray-300 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-green-500 hover:border-gray-400 transition-colors">
                         <span id="vehicle-availability-label" class="text-gray-700">Car (Own)</span>
                         <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400"></i>
@@ -217,21 +242,48 @@ requireRole(['user']);
             </div>
 
             <!-- Upload License -->
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Upload Driver's License / Digital Copy (Required)</label>
-                <div class="flex items-center gap-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
-                    <button class="px-4 py-2 bg-white border border-gray-300 rounded text-sm font-medium hover:bg-gray-100">Choose File</button>
-                    <span class="text-sm text-gray-500 italic">No file chosen</span>
+            <div class="space-y-4">
+                <label class="block text-sm font-medium text-gray-700">Upload Driver's License (Required)</label>
+                
+                <!-- Note -->
+                <div class="bg-blue-50 border border-blue-100 rounded-lg p-3">
+                    <p class="text-xs text-blue-800 flex gap-2">
+                        <i data-lucide="info" class="w-4 h-4 shrink-0 mt-0.5"></i>
+                        Please upload clear images of both the <strong>Front</strong> and <strong>Back</strong> of your physical license. Screenshots from the MyJPJ app are also accepted.
+                    </p>
                 </div>
-                <p class="text-xs text-gray-400 mt-1">Accepts screenshots from MyJPJ app or PDF exports.</p>
+
+                <div class="grid md:grid-cols-2 gap-4">
+                    <!-- Front Upload -->
+                    <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                        <span class="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">License Front</span>
+                        <div class="flex items-center gap-3">
+                            <input type="file" id="license-front" name="driver_license_front" class="hidden" accept="image/png, image/jpeg, image/jpg" onchange="updateFileName(this, 'license-front-name')">
+                            <button type="button" onclick="document.getElementById('license-front').click()" class="px-4 py-2 bg-white border border-gray-300 rounded text-sm font-medium hover:bg-gray-100 transition-colors shadow-sm text-gray-700">Choose File</button>
+                            <span id="license-front-name" class="text-sm text-gray-500 italic truncate max-w-[150px]">No file chosen</span>
+                        </div>
+                    </div>
+
+                    <!-- Back Upload -->
+                    <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                        <span class="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-wide">License Back</span>
+                        <div class="flex items-center gap-3">
+                            <input type="file" id="license-back" name="driver_license_back" class="hidden" accept="image/png, image/jpeg, image/jpg" onchange="updateFileName(this, 'license-back-name')">
+                            <button type="button" onclick="document.getElementById('license-back').click()" class="px-4 py-2 bg-white border border-gray-300 rounded text-sm font-medium hover:bg-gray-100 transition-colors shadow-sm text-gray-700">Choose File</button>
+                            <span id="license-back-name" class="text-sm text-gray-500 italic truncate max-w-[150px]">No file chosen</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-xs text-gray-400">Supported formats: PNG, JPG, JPEG.</p>
             </div>
 
             <!-- Experience -->
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Animal Handling Experience</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Animal Handling Experience (Optional)</label>
                 <textarea 
                     id="experience-text"
                     class="w-full border border-gray-300 rounded-lg p-3 text-sm outline-none focus:border-green-500 h-32 resize-none scrollbar-thin" 
+                    name="animal_handling_experience"
                     maxlength="100" 
                     placeholder="e.g., Worked at shelter for 2 years, own 3 dogs..."
                     oninput="updateCharCount(this, 'experience-counter', 100)"></textarea>
@@ -244,6 +296,7 @@ requireRole(['user']);
                 <textarea 
                     id="certifications-text"
                     class="w-full border border-gray-300 rounded-lg p-3 text-sm outline-none focus:border-green-500 h-32 resize-none scrollbar-thin" 
+                    name="training_certifications"
                     maxlength="100" 
                     placeholder="e.g., Pet First Aid Level 1"
                     oninput="updateCharCount(this, 'cert-counter', 100)"></textarea>
@@ -273,11 +326,15 @@ requireRole(['user']);
             <!-- Checkboxes -->
             <div class="space-y-3">
                 <label class="flex items-center gap-3 cursor-pointer">
-                    <input type="checkbox" class="w-4 h-4 text-orange-600 rounded focus:ring-orange-500 cursor-pointer">
+                    <input type="checkbox" 
+                            id="agreement-check-1"
+                            class="w-4 h-4 text-orange-600 rounded focus:ring-orange-500 cursor-pointer">
                     <span class="text-sm text-gray-700">I have read and agree to the <span class="font-bold">Code of Conduct</span> & <span class="font-bold">Waiver of Liability</span>.</span>
                 </label>
                 <label class="flex items-center gap-3 cursor-pointer">
-                    <input type="checkbox" class="w-4 h-4 text-orange-600 rounded focus:ring-orange-500 cursor-pointer">
+                    <input type="checkbox" 
+                            id="agreement-check-2"
+                            class="w-4 h-4 text-orange-600 rounded focus:ring-orange-500 cursor-pointer">
                     <span class="text-sm text-gray-700">I acknowledge the <span class="font-bold">Mandatory Reporting Clause</span>.</span>
                 </label>
             </div>
@@ -299,6 +356,7 @@ requireRole(['user']);
         <!-- Hidden fields to carry base64 images to backend when the user submits -->
         <input type="hidden" id="mykad_front_base64" name="mykad_front_base64" value="">
         <input type="hidden" id="mykad_back_base64" name="mykad_back_base64" value="">
+        <input type="hidden" id="signature_base64" name="signature_base64" value="">
 
         <!-- Navigation Buttons -->
         <div class="p-6 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
@@ -315,7 +373,3 @@ requireRole(['user']);
         </div>
     </form>
 </div>
-
-<script>
-    const CURRENT_USER_ID = "<?php echo $_SESSION['user_id']; ?>";
-</script>
