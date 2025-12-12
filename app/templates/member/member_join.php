@@ -16,7 +16,7 @@ requireRole(['user']);
     <!-- Wizard Progress -->
     <div class="flex items-center justify-between max-w-2xl mx-auto mb-10 relative">
         <!-- Step 1 -->
-        <div class="flex-none flex flex-col items-center gap-2 cursor-pointer z-10" onclick="goToStep(1)">
+        <div class="flex-none flex flex-col items-center gap-2 z-10">
             <div id="step-indicator-1" class="w-10 h-10 rounded-full bg-orange-600 text-white flex items-center justify-center font-bold border-4 border-white shadow transition-colors">1</div>
             <span class="text-xs font-bold text-gray-600">ID Verification</span>
         </div>
@@ -25,7 +25,7 @@ requireRole(['user']);
         <div id="line-1" class="flex-1 h-0.5 border-t-4 border-dotted border-gray-200 mx-2 transition-all duration-300"></div>
 
         <!-- Step 2 -->
-        <div class="flex-none flex flex-col items-center gap-2 cursor-pointer z-10" onclick="goToStep(2)">
+        <div class="flex-none flex flex-col items-center gap-2 z-10">
             <div id="step-indicator-2" class="w-10 h-10 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-bold border-4 border-white shadow transition-colors">2</div>
             <span class="text-xs font-medium text-gray-500">Legal</span>
         </div>
@@ -34,7 +34,7 @@ requireRole(['user']);
         <div id="line-2" class="flex-1 h-0.5 border-t-4 border-dotted border-gray-200 mx-2 transition-all duration-300"></div>
 
         <!-- Step 3 -->
-        <div class="flex-none flex flex-col items-center gap-2 cursor-pointer z-10" onclick="goToStep(3)">
+        <div class="flex-none flex flex-col items-center gap-2 z-10">
             <div id="step-indicator-3" class="w-10 h-10 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-bold border-4 border-white shadow transition-colors">3</div>
             <span class="text-xs font-medium text-gray-500">Quals</span>
         </div>
@@ -43,7 +43,7 @@ requireRole(['user']);
         <div id="line-3" class="flex-1 h-0.5 border-t-4 border-dotted border-gray-200 mx-2 transition-all duration-300"></div>
 
         <!-- Step 4 -->
-        <div class="flex-none flex flex-col items-center gap-2 cursor-pointer z-10" onclick="goToStep(4)">
+        <div class="flex-none flex flex-col items-center gap-2 z-10">
             <div id="step-indicator-4" class="w-10 h-10 rounded-full bg-gray-200 text-gray-500 flex items-center justify-center font-bold border-4 border-white shadow transition-colors">4</div>
             <span class="text-xs font-medium text-gray-500">Agreement</span>
         </div>
@@ -69,24 +69,32 @@ requireRole(['user']);
                 <!-- Front IC -->
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-2">MyKad (Front)</label>
-                    <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:bg-gray-50 transition-colors cursor-pointer group">
+                    <!-- Box for MyKad click to activate the camera -->
+                    <div id="mykad-box-front" class="w-full aspect-[1.58/1] border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center text-center hover:bg-gray-50 transition-colors cursor-pointer group"
+                         onclick="openMyKadCamera('front')">
                         <div class="w-16 h-12 bg-gray-200 rounded mx-auto mb-3 flex items-center justify-center text-gray-400 group-hover:text-blue-500">
                             <i data-lucide="image" class="w-6 h-6"></i>
                         </div>
                         <p class="text-sm font-medium text-blue-600">MyKad Front</p>
                         <p class="text-xs text-gray-400 mt-1">Place the front of your MyKad in the box.</p>
                     </div>
+                    <!-- Preview image (hidden until capture) -->
+                    <img id="mykad-preview-front" src="" alt="MyKad front preview" class="hidden w-full aspect-[1.58/1] object-cover rounded-xl border cursor-pointer hover:opacity-80 transition-opacity" />
                 </div>
                 <!-- Back IC -->
                 <div>
                     <label class="block text-sm font-bold text-gray-700 mb-2">MyKad (Back)</label>
-                    <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:bg-gray-50 transition-colors cursor-pointer group">
+                    <!-- Box for MyKad click to activate the camera -->
+                    <div id="mykad-box-back" class="w-full aspect-[1.58/1] border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center text-center hover:bg-gray-50 transition-colors cursor-pointer group"
+                         onclick="openMyKadCamera('back')">
                         <div class="w-16 h-12 bg-gray-200 rounded mx-auto mb-3 flex items-center justify-center text-gray-400 group-hover:text-blue-500">
                             <i data-lucide="image" class="w-6 h-6"></i>
                         </div>
                         <p class="text-sm font-medium text-blue-600">MyKad Back</p>
                         <p class="text-xs text-gray-400 mt-1">Place the back of your MyKad in the box.</p>
                     </div>
+                    <!-- Preview image (hidden until capture) -->
+                    <img id="mykad-preview-back" src="" alt="MyKad back preview" class="hidden w-full aspect-[1.58/1] object-cover rounded-xl border cursor-pointer hover:opacity-80 transition-opacity" />
                 </div>
             </div>
         </div>
@@ -138,7 +146,14 @@ requireRole(['user']);
                     
                     <div id="conviction-details" class="hidden mt-3 animate-fade-in">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Please explain the nature of the conviction:</label>
-                        <textarea class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none" rows="3" placeholder="Provide details..."></textarea>
+                        <textarea 
+                            id="conviction-text"
+                            class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-orange-500 outline-none h-32 resize-none scrollbar-thin" 
+                            maxlength="300" 
+                            placeholder="Provide details..."
+                            oninput="updateCharCount(this, 'conviction-counter', 300)"></textarea>
+                        <div id="conviction-counter" class="text-right text-xs text-gray-400 mt-1 font-medium">300 out of 300 characters remaining</div>
+                        <div id="conviction-warning" class="hidden text-xs text-red-500 mt-1">Special characters forbidden.</div>
                     </div>
                 </div>
             </div>
@@ -149,6 +164,20 @@ requireRole(['user']);
             <div class="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">
                 <div class="bg-green-100 p-2 rounded-lg text-green-600"><i data-lucide="award" class="w-6 h-6"></i></div>
                 <h3 class="text-xl font-bold text-gray-800">III. Qualifications & Experience</h3>
+            </div>
+
+            <div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg mb-2 shadow-sm">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <i data-lucide="alert-triangle" class="h-5 w-5 text-amber-500"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h3 class="text-sm font-bold text-amber-800">Mandatory Prerequisite</h3>
+                        <div class="mt-1 text-sm text-amber-700">
+                            <p>Please Note: To ensure the safety and efficiency of our rescue operations, possession of a valid driver's license and immediate access to a reliable vehicle are <strong>mandatory prerequisites</strong> for this role.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="grid md:grid-cols-2 gap-6 relative z-30">
@@ -165,7 +194,6 @@ requireRole(['user']);
                             <button onclick="selectCustomOption('license-status', 'full', 'Full License (D/DA)')" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-lg transition-colors">Full License (D/DA)</button>
                             <button onclick="selectCustomOption('license-status', 'probation', 'Probationary (P)')" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-lg transition-colors">Probationary (P)</button>
                             <button onclick="selectCustomOption('license-status', 'motorcycle', 'Motorcycle Only')" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-lg transition-colors">Motorcycle Only</button>
-                            <button onclick="selectCustomOption('license-status', 'none', 'No License')" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-lg transition-colors">No License</button>
                         </div>
                     </div>
                 </div>
@@ -183,7 +211,6 @@ requireRole(['user']);
                             <button onclick="selectCustomOption('vehicle-availability', 'car', 'Car (Own)')" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-lg transition-colors">Car (Own)</button>
                             <button onclick="selectCustomOption('vehicle-availability', 'van', 'Van/Truck (Own)')" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-lg transition-colors">Van/Truck (Own)</button>
                             <button onclick="selectCustomOption('vehicle-availability', 'motorcycle', 'Motorcycle (Own)')" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-lg transition-colors">Motorcycle (Own)</button>
-                            <button onclick="selectCustomOption('vehicle-availability', 'none', 'None')" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-lg transition-colors">None</button>
                         </div>
                     </div>
                 </div>
@@ -202,13 +229,25 @@ requireRole(['user']);
             <!-- Experience -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Animal Handling Experience</label>
-                <textarea class="w-full border border-gray-300 rounded-lg p-3 text-sm outline-none focus:border-green-500" rows="3" placeholder="e.g., Worked at shelter for 2 years, own 3 dogs..."></textarea>
+                <textarea 
+                    id="experience-text"
+                    class="w-full border border-gray-300 rounded-lg p-3 text-sm outline-none focus:border-green-500 h-32 resize-none scrollbar-thin" 
+                    maxlength="100" 
+                    placeholder="e.g., Worked at shelter for 2 years, own 3 dogs..."
+                    oninput="updateCharCount(this, 'experience-counter', 100)"></textarea>
+                <div id="experience-counter" class="text-right text-xs text-gray-400 mt-1 font-medium">100 out of 100 characters remaining</div>
             </div>
 
             <!-- Certifications -->
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Training / Certifications (Optional)</label>
-                <input type="text" class="w-full border border-gray-300 rounded-lg p-3 text-sm outline-none focus:border-green-500" placeholder="e.g., Pet First Aid Level 1">
+                <textarea 
+                    id="certifications-text"
+                    class="w-full border border-gray-300 rounded-lg p-3 text-sm outline-none focus:border-green-500 h-32 resize-none scrollbar-thin" 
+                    maxlength="100" 
+                    placeholder="e.g., Pet First Aid Level 1"
+                    oninput="updateCharCount(this, 'cert-counter', 100)"></textarea>
+                <div id="cert-counter" class="text-right text-xs text-gray-400 mt-1 font-medium">100 out of 100 characters remaining</div>
             </div>
         </div>
 
@@ -257,6 +296,10 @@ requireRole(['user']);
             </div>
         </div>
 
+        <!-- Hidden fields to carry base64 images to backend when the user submits -->
+        <input type="hidden" id="mykad_front_base64" name="mykad_front_base64" value="">
+        <input type="hidden" id="mykad_back_base64" name="mykad_back_base64" value="">
+
         <!-- Navigation Buttons -->
         <div class="p-6 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
             <button id="btn-back" type="button" onclick="changeStep(-1)" class="hidden px-6 py-2 text-gray-600 hover:text-gray-800 font-medium">Back</button>
@@ -272,3 +315,7 @@ requireRole(['user']);
         </div>
     </form>
 </div>
+
+<script>
+    const CURRENT_USER_ID = "<?php echo $_SESSION['user_id']; ?>";
+</script>

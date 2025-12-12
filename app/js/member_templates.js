@@ -969,6 +969,32 @@ function initSignaturePad() {
     }
 }
 
+function updateCharCount(input, counterId, limit) {
+    // 1. Strict Input Sanitization (SQL Injection Protection)
+    // Instantly remove characters that are commonly used in SQL injection attacks:
+    // ' (Single Quote), " (Double Quote), ; (Semicolon)
+    const unsafeChars = /['";]/g;
+    
+    if (unsafeChars.test(input.value)) {
+        // Remove the dangerous characters immediately
+        input.value = input.value.replace(unsafeChars, '');
+    }
+
+    // 2. Update Character Counter
+    const currentLength = input.value.length;
+    const remaining = limit - currentLength;
+    const counterElement = document.getElementById(counterId);
+    
+    counterElement.textContent = `${remaining} out of ${limit} characters remaining`;
+
+    // 3. Visual Feedback for limit
+    if (remaining <= 0) {
+        counterElement.classList.add('text-red-600');
+    } else {
+        counterElement.classList.remove('text-red-600');
+    }
+}
+
 function openLegalModal() {
     const legalModal = document.getElementById('legal-modal');
     if (!legalModal) return;
@@ -1029,11 +1055,57 @@ function resetLegalForm() {
     }
 }
 
-function submitApplication() {
-    const reloadPage = function() {
-        location.reload();
-    };
-    
-    closeLegalModal()
-    showSuccessModal('Submission Successful', 'Your form has been submitted.', undefined, reloadPage);
+async function submitApplication() {
+    try {
+        // close modal smoothly
+        closeLegalModal();
+
+        // Collect MyKad data captured by mykad_service.js
+        if (!window.mykadCapture || !mykadCapture.front || !mykadCapture.back) {
+            showErrorModal(
+                "Missing MyKad Images",
+                "Please capture both front and back MyKad images before submitting."
+            );
+            return;
+        }
+
+        // Prepare form data
+        const formData = new FormData();
+        formData.append("mykad_front", mykadCapture.front.blob);
+        formData.append("mykad_back", mykadCapture.back.blob);
+        formData.append("user_id", CURRENT_USER_ID); 
+        // Replace CURRENT_USER_ID via PHP echo
+
+        // Add any other fields later if needed
+
+        // Upload to backend
+        const response = await fetch("/PawRescue/app/api/process_mykad.php", {
+            method: "POST",
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (!result.success) {
+            showErrorModal("Submission Failed", result.message || "Unknown error.");
+            return;
+        }
+
+        // Continue your original behavior
+        const reloadPage = function() { location.reload(); };
+
+        showSuccessModal(
+            "Submission Successful",
+            "Your form has been submitted.",
+            undefined,
+            reloadPage
+        );
+
+    } catch (error) {
+        console.error("Submit error:", error);
+        showErrorModal(
+            "Unexpected Error",
+            "Something went wrong while submitting your application."
+        );
+    }
 }
