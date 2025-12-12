@@ -13,13 +13,19 @@ db.php
 
 # Ignore files inside avatars
 /app/images/uploads/avatars/*
+/app/images/uploads/driver_license/*
 /app/images/uploads/injured_animals/*
 /app/images/uploads/locations/*
+/app/images/uploads/mykad/*
+/app/images/uploads/signatures/*
 
 # Includes these folders in commit history
 !/app/images/uploads/avatars/.gitkeep
+!/app/images/uploads/driver_license/.gitkeep
 !/app/images/uploads/injured_animals/.gitkeep
 !/app/images/uploads/locations/.gitkeep
+!/app/images/uploads/mykad/.gitkeep
+!/app/images/uploads/signatures/.gitkeep
 
 *.txt
 *prototype.html
