@@ -15,6 +15,18 @@ $stmt->execute();
 $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 
+// Fetch Rescuer Application History
+$stmt_rescuer_application = $conn->prepare("
+    SELECT application_id, status, created_at
+    FROM rescuer_applications 
+    WHERE user_id = ? 
+    ORDER BY created_at DESC
+");
+$stmt_rescuer_application->bind_param("s", $user_id);
+$stmt_rescuer_application->execute();
+$history_result = $stmt_rescuer_application->get_result();
+$applications = $history_result->fetch_all(MYSQLI_ASSOC);
+
 // Fallbacks
 $user_id = $user['user_id'] ?? $user_id;
 
@@ -113,19 +125,16 @@ $initials = getInitials($full_name);
             </div>
         </div>
 
-        <!-- Notifications Section -->
+        <!-- History Section -->
         <div class="p-6">
             <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <i data-lucide="bell" class="w-5 h-5 text-orange-500"></i>
-                Notifications
+                <i data-lucide="history" class="w-5 h-5 text-orange-500"></i>
+                History
             </h3>
             <div class="space-y-4">
-                <div class="flex items-center justify-between">
-                    <div><p class="font-medium text-gray-800">Email Notifications</p><p class="text-sm text-gray-500">Receive daily summaries.</p></div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" checked onchange="saveNotificationPreference()" class="sr-only peer">
-                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-100 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
-                    </label>
+                <div class="flex items-center justify-between py-2 border-b border-gray-50">
+                    <div><p class="font-medium text-gray-800">Rescuer Application</p><p class="text-sm text-gray-500">View your past applications to be a rescuer.</p></div>
+                    <button onclick="openModal('application-history-modal')" class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors">&nbsp;View&nbsp;</button>
                 </div>
             </div>
         </div>
@@ -184,5 +193,107 @@ $initials = getInitials($full_name);
         </div>
         <button onclick="cancelSettings()" class="px-6 py-2 border border-gray-200 rounded-lg text-gray-600 font-medium hover:bg-gray-50 transition-colors">Cancel</button>
         <button onclick="saveSettings()" class="px-6 py-2 bg-orange-500 text-white rounded-lg font-medium hover:bg-orange-600 transition-colors shadow-sm">Save Changes</button>
+    </div>
+</div>
+
+<!-- Application History Modal (Level 1) -->
+<div id="application-history-modal" class="fixed inset-0 z-50 hidden">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="closeModalById('application-history-modal')"></div>
+    
+    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl w-[95%] max-w-2xl overflow-hidden modal-enter flex flex-col max-h-[85vh]">
+        
+        <div class="p-5 md:p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50 sticky top-0 z-20">
+            <div>
+                <h3 class="text-lg md:text-xl font-bold text-gray-800">Application History</h3>
+                <p class="text-xs md:text-sm text-gray-500">View details of your past applications.</p>
+            </div>
+            <button onclick="closeModalById('application-history-modal')" class="text-gray-400 hover:text-gray-600 bg-white p-2 rounded-lg border border-gray-200 shadow-sm hover:shadow transition-all active:bg-gray-100">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-0 scrollbar-thin">
+            <table class="w-full text-left border-collapse">
+                
+                <thead class="hidden md:table-header-group bg-gray-50 sticky top-0 z-10 shadow-sm">
+                    <tr>
+                        <th class="px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200">No.</th>
+                        <th class="px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200">Application ID</th>
+                        <th class="px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200">Submitted On</th>
+                        <th class="px-6 py-3 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200">Status</th>
+                    </tr>
+                </thead>
+
+                <tbody id="application-history-list" class="divide-y divide-gray-100">
+                    <?php if (empty($applications)): ?>
+                        <tr>
+                            <td colspan="4" class="px-6 py-12 whitespace-nowrap text-center text-sm text-gray-500 italic col-span-full">
+                                <div class="flex flex-col items-center gap-3">
+                                    <div class="p-3 bg-gray-50 rounded-full">
+                                        <i data-lucide="inbox" class="w-8 h-8 text-gray-300"></i>
+                                    </div>
+                                    <span>You have not submitted any applications yet.</span>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php else: ?>
+                        <?php 
+                        $total_apps = count($applications);
+                        foreach ($applications as $index => $app): 
+                            $app_id = htmlspecialchars($app['application_id']);
+                            $date = date("d M Y", strtotime($app['created_at']));
+                            $status = $app['status'];
+                            $display_no = $total_apps - $index;
+
+                            // Badge Logic (No changes needed here)
+                            if ($status === 'pending') {
+                                $badge = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800"><span class="w-1.5 h-1.5 bg-yellow-500 rounded-full mr-1.5"></span>Pending</span>';
+                            } elseif ($status === 'approved') {
+                                $badge = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800"><span class="w-1.5 h-1.5 bg-green-500 rounded-full mr-1.5"></span>Approved</span>';
+                            } else {
+                                $badge = '<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800"><span class="w-1.5 h-1.5 bg-red-500 rounded-full mr-1.5"></span>Rejected</span>';
+                            }
+                        ?>
+                        
+                        <tr class="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 p-4 border-b border-gray-100 items-center hover:bg-gray-50 cursor-pointer transition-colors md:table-row" 
+                            onclick="viewApplicationDetails(this)" 
+                            data-id="<?php echo $app_id; ?>"
+                            data-date="<?php echo $date; ?>"
+                            data-status="<?php echo $status; ?>"
+                            data-reason="<?php echo isset($app['rejection_reason']) ? htmlspecialchars($app['rejection_reason']) : ''; ?>">
+                            
+                            <td class="hidden md:table-cell px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-mono">
+                                <?php echo $display_no; ?>
+                            </td>
+
+                            <td class="text-gray-900 font-semibold md:font-medium md:px-6 md:py-4 whitespace-nowrap text-sm">
+                                <?php echo $app_id; ?>
+                            </td>
+
+                            <td class="text-xs text-gray-500 md:text-sm md:text-gray-500 md:px-6 md:py-4 whitespace-nowrap col-start-1">
+                                <?php echo $date; ?>
+                            </td>
+
+                            <td class="text-right row-span-2 md:row-span-1 md:text-left md:px-6 md:py-4 whitespace-nowrap text-sm col-start-2 row-start-1">
+                                <?php echo $badge; ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+        <div class="p-4 bg-gray-50 border-t border-gray-100 text-center text-xs text-gray-400">
+            Tap on a card to view full details
+        </div>
+    </div>
+</div>
+
+<!-- Application History Modal (Level 2) -->
+<div id="application-details-modal" class="fixed inset-0 z-[60] hidden">
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-md" onclick="closeModalById('application-details-modal')"></div>
+    <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-lg modal-enter p-4">
+        <div id="application-details-content">
+            </div>
     </div>
 </div>

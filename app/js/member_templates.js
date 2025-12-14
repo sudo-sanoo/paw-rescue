@@ -1272,3 +1272,128 @@ async function submitApplication() {
         showErrorModal("System Error", "A network error occurred. Please check the console.");
     }
 }
+
+function viewApplicationDetails(row) {
+    // Retrieve data from data-attributes
+    const app = {
+        appId: row.dataset.id,
+        date: row.dataset.date,
+        status: row.dataset.status,
+        reason: row.dataset.reason
+    };
+
+    let styles = {
+        border: 'border-gray-100',
+        gradient: 'from-green-100 via-gray-100 to-amber-100',
+        headerBorder: 'border-gray-200',
+        iconBg: 'bg-gray-100',
+        iconColor: 'text-gray-600',
+        icon: 'file-question',
+        title: 'Application Update',
+        desc: 'Status unknown.',
+        statusBadge: ''
+    };
+
+    if (app.status === 'pending') {
+        styles.border = 'border-amber-200';
+        styles.gradient = 'from-green-50 via-amber-100 to-amber-300';
+        styles.headerBorder = 'border-amber-300';
+        styles.iconBg = 'bg-amber-100';
+        styles.iconColor = 'text-amber-600';
+        styles.icon = 'hourglass';
+        styles.title = 'Application Under Review';
+        styles.desc = 'Thank you for stepping up to become a PawRescue Hero.<br>Our team is currently reviewing your verification documents.';
+        styles.statusBadge = `<span class="inline-flex items-center gap-2 px-3 py-1 bg-yellow-50 text-yellow-700 rounded-full text-xs font-bold border border-yellow-100"><span class="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></span> Pending</span>`;
+    } else if (app.status === 'approved') {
+        styles.border = 'border-green-200';
+        styles.gradient = 'from-amber-50 via-green-100 to-green-300';
+        styles.headerBorder = 'border-green-300';
+        styles.iconBg = 'bg-green-100';
+        styles.iconColor = 'text-green-600';
+        styles.icon = 'medal';
+        styles.title = 'You are a Hero!';
+        styles.desc = 'Your application has been approved. You are now an official rescuer.';
+        styles.statusBadge = `<span class="inline-flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs font-bold border border-green-100"><span class="w-2 h-2 bg-green-500 rounded-full"></span> Approved</span>`;
+    } else {
+        styles.border = 'border-red-200';
+        styles.gradient = 'from-gray-50 via-red-100 to-red-300';
+        styles.headerBorder = 'border-red-300';
+        styles.iconBg = 'bg-red-100';
+        styles.iconColor = 'text-red-600';
+        styles.icon = 'x-circle';
+        styles.title = 'Application Rejected';
+        
+        const reasonText = app.reason 
+            ? `<strong>Reason:</strong> ${app.reason}` 
+            : 'Unfortunately, your application for the Community Rescuer role has not been successful at this time. We encourage you to gain relevant experience and reapply whenever you feel ready.';
+        
+        styles.desc = reasonText;
+        styles.statusBadge = `<span class="inline-flex items-center gap-2 px-3 py-1 bg-red-50 text-red-700 rounded-full text-xs font-bold border border-red-100">Rejected</span>`;
+    }
+
+    const htmlContent = `
+        <div class="max-w-full mx-auto bg-white rounded-2xl shadow-sm border ${styles.border} overflow-hidden">
+            <div class="bg-gradient-to-r ${styles.gradient} p-8 text-center border-b ${styles.headerBorder}">
+                <div class="w-20 h-20 ${styles.iconBg} ${styles.iconColor} rounded-full flex items-center justify-center mx-auto mb-6 shadow-md">
+                    <i data-lucide="${styles.icon}" class="w-10 h-10"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">${styles.title}</h2>
+                <p class="text-gray-600 text-sm leading-relaxed">${styles.desc}</p>
+            </div>
+
+            <div class="p-8">
+                <div class="bg-gray-50 rounded-xl p-6 border border-gray-100">
+                    <div class="flex items-center justify-between mb-4 border-b border-gray-200 pb-4">
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Application ID</span>
+                        <span class="font-mono text-gray-700 font-bold tracking-tight">${app.appId}</span>
+                    </div>
+                    <div class="flex items-center justify-between mb-4 border-b border-gray-200 pb-4">
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Submitted On</span>
+                        <span class="text-gray-700 font-medium">${app.date}</span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-bold text-gray-400 uppercase tracking-wider">Current Status</span>
+                        ${styles.statusBadge}
+                    </div>
+                </div>
+                <div class="mt-6 text-center">
+                        <button onclick="closeModalById('application-details-modal')" class="text-gray-400 hover:text-gray-600 text-sm font-medium transition-colors">Close</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const contentEl = document.getElementById('application-details-content');
+    if(contentEl) {
+        contentEl.innerHTML = htmlContent;
+        if(typeof lucide !== 'undefined') lucide.createIcons();
+        openModal('application-details-modal');
+    }
+}
+
+function handleReapply(appId) {
+    // 1. Optimistic UI: Hide overlay immediately
+    const overlay = document.getElementById('rejection-overlay');
+    const form = document.getElementById('rescuer-form-container');
+    
+    // 2. Send Request to DB to mark as resolved
+    fetch('../api/resolve_rescuer_application.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ application_id: appId })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Animation for smooth transition
+            overlay.classList.add('opacity-0', 'transition-opacity', 'duration-300');
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                form.classList.remove('hidden');
+            }, 300);
+        } else {
+            alert('Something went wrong. Please try again.');
+        }
+    })
+    .catch(error => console.error('Error:', error));
+}

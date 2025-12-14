@@ -20,7 +20,7 @@ $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 
 $full_name = $user['full_name'];
-$user_role = ($user['role'] == 'admin') ? "PawRescue System Admin" : $user['role'];
+$user_role = ($user['role'] == 'admin') ? "PawRescue Admin" : $user['role'];
 $phone = $user['phone'];
 $profile_photo = $user['profile_photo'] ?? ''; // stored as relative path like "images/uploads/avatars/abc.png"
 
@@ -134,10 +134,6 @@ $initials = getInitials($user['full_name']);
 
                     <!-- Right Side Actions -->
                     <div class="flex items-center gap-4">
-                        <button class="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full transition-colors">
-                            <i data-lucide="bell" class="w-5 h-5"></i>
-                            <span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-                        </button>
                         <div class="flex items-center gap-3 pl-4 border-l border-gray-200">
                             <div class="text-right hidden md:block">
                                 <p class="text-sm font-medium text-gray-700"><?php echo htmlspecialchars($full_name);?></p>

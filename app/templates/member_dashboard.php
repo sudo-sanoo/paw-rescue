@@ -148,10 +148,6 @@ $initials = getInitials($user['full_name']);
 
                     <!-- Right Side Actions -->
                     <div class="flex items-center gap-4">
-                        <button class="relative p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-full transition-colors">
-                            <i data-lucide="bell" class="w-5 h-5"></i>
-                            <span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-                        </button>
                         <div class="flex items-center gap-3 pl-4 border-l border-gray-200">
                             <div class="text-right hidden md:block">
                                 <p class="text-sm font-medium text-gray-700"><?php echo htmlspecialchars($full_name);?></p>
