@@ -50,6 +50,7 @@ $initials = getInitials($user['full_name']);
     
     <!-- JS -->
     <script defer src="../js/admin_templates.js"></script>
+    <script defer src="../js/admin_application.js"></script>
     <!-- Cropper.js CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <!-- Cropper.js JS -->
@@ -96,9 +97,9 @@ $initials = getInitials($user['full_name']);
                     <i data-lucide="users" class="w-5 h-5 shrink-0"></i>
                     <span>Volunteers</span>
                 </button>
-                <button onclick="switchTab('schedule')" id="nav-schedule" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900">
-                    <i data-lucide="calendar" class="w-5 h-5 shrink-0"></i>
-                    <span>Schedule</span>
+                <button onclick="switchTab('application')" id="nav-application" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                    <i data-lucide="file-user" class="w-5 h-5 shrink-0"></i>
+                    <span>Applications</span>
                 </button>
             </nav>
 
