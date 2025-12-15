@@ -488,6 +488,8 @@ $show_form = !$has_application || ($app_data['status'] === 'rejected' && $app_da
                 <!-- Hidden fields to carry base64 images to backend when the user submits -->
                 <input type="hidden" id="mykad_front_base64" name="mykad_front_base64" value="">
                 <input type="hidden" id="mykad_back_base64" name="mykad_back_base64" value="">
+                <input type="hidden" id="license-status-value" name="license_status" value="full">
+                <input type="hidden" id="vehicle-availability-value" name="vehicle_availability" value="car">
                 <input type="hidden" id="signature_base64" name="signature_base64" value="">
 
                 <!-- Navigation Buttons -->
