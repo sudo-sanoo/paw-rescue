@@ -15,12 +15,11 @@ $stats = [
 $stmt = $conn->query("SELECT COUNT(*) as count FROM rescuer_applications WHERE status = 'pending'");
 $stats['pending'] = $stmt->fetch_assoc()['count'];
 
-// Approved Today
-$today = date('Y-m-d');
-$stmt = $conn->query("SELECT COUNT(*) as count FROM rescuer_applications WHERE status = 'approved' AND DATE(updated_at) = '$today'");
-$stats['approved_today'] = $stmt->fetch_assoc()['count'];
+// Pending for more than 3 days
+$stmt = $conn->query("SELECT COUNT(*) as count FROM rescuer_applications WHERE status = 'pending' AND created_at < DATE_SUB(NOW(), INTERVAL 3 DAY)");
+$stats['overdue_pending'] = $stmt->fetch_assoc()['count'];
 
-// Total Volunteers (Active rescuer applications)
+// Total Rescuers (Active rescuer applications)
 $stmt = $conn->query("SELECT COUNT(*) as count FROM rescuer_applications WHERE status = 'approved'");
 $stats['total_volunteers'] = $stmt->fetch_assoc()['count'];
 
@@ -80,7 +79,6 @@ if ($result) {
         <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
             <div>
                 <p class="text-gray-500 text-sm font-medium">Pending Review</p>
-                <!-- HARDCODED VALUE -->
                 <h3 class="text-2xl font-bold text-gray-800 mt-1" id="stat-pending-count"><?php echo htmlspecialchars($stats['pending']); ?></h3>
             </div>
             <div class="w-10 h-10 rounded-full bg-yellow-100 text-yellow-600 flex items-center justify-center">
@@ -89,16 +87,16 @@ if ($result) {
         </div>
         <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
             <div>
-                <p class="text-gray-500 text-sm font-medium">Approved Today</p>
-                <h3 class="text-2xl font-bold text-gray-800 mt-1"><?php echo htmlspecialchars($stats['approved_today']); ?></h3>
+                <p class="text-gray-500 text-sm font-medium">Overdue Pending Review (3+ Days)</p>
+                <h3 class="text-2xl font-bold text-gray-800 mt-1"><?php echo htmlspecialchars($stats['overdue_pending']); ?></h3>
             </div>
-            <div class="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
-                <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+            <div class="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center">
+                <i data-lucide="alert-triangle" class="w-5 h-5"></i>
             </div>
         </div>
         <div class="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex items-center justify-between">
             <div>
-                <p class="text-gray-500 text-sm font-medium">Total Volunteers</p>
+                <p class="text-gray-500 text-sm font-medium">Total Rescuers</p>
                 <h3 class="text-2xl font-bold text-gray-800 mt-1"><?php echo htmlspecialchars($stats['total_volunteers']); ?></h3>
             </div>
             <div class="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center">
@@ -276,14 +274,14 @@ if ($result) {
     <!-- 4. Review Modal (5 Pages - Orange Theme) -->
     <!-- This modal is hidden by default. JS toggles 'hidden' class. -->
     <div id="admin-review-modal" class="fixed inset-0 z-50 hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-        <!-- Overlay -->
+    
+        <input type="hidden" id="modal-hidden-app-id" name="application_id" value="">
+
         <div class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm transition-opacity" onclick="window.closeAdminModal()"></div>
         
-        <!-- Modal Panel -->
         <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div class="relative w-full max-w-3xl bg-white rounded-xl shadow-2xl flex flex-col max-h-[90vh] animate-fade-in">
                 
-                <!-- Header -->
                 <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-xl">
                     <div class="flex items-center gap-3">
                         <div class="bg-white p-1.5 rounded-md border border-gray-200 shadow-sm">
@@ -299,25 +297,22 @@ if ($result) {
                     </button>
                 </div>
 
-                <!-- Scrollable Content Body -->
                 <div class="flex-1 overflow-y-auto p-6 min-h-[400px]">
                     
-                    <!-- PAGE 1: General Info (HARDCODED) -->
                     <div id="modal-page-1" class="space-y-6">
                         <div class="flex flex-col sm:flex-row gap-6 items-center sm:items-start bg-orange-50 p-6 rounded-xl border border-orange-100">
-                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Alex Martinez" class="w-20 h-20 rounded-full object-cover border-4 border-white shadow-md bg-white">
+                            <img id="modal-profile-photo" src="" class="w-20 h-20 rounded-full object-cover border-4 border-white shadow-md bg-white">
                             <div class="flex-1 text-center sm:text-left">
-                                <!-- HARDCODED NAME -->
-                                <h2 id="modal-name" class="text-xl font-bold text-gray-900">Alex Martinez</h2>
+                                <h2 id="modal-full-name" class="text-xl font-bold text-gray-900">...</h2>
                                 <div class="flex flex-wrap justify-center sm:justify-start gap-3 mt-2">
                                     <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white text-gray-600 border border-gray-200 shadow-sm">
-                                        <i data-lucide="user" class="w-3 h-3"></i> <span>USR-8821</span>
+                                        <i data-lucide="user" class="w-3 h-3"></i> <span id="modal-user-id">...</span>
                                     </span>
                                     <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white text-gray-600 border border-gray-200 shadow-sm">
-                                        <i data-lucide="phone" class="w-3 h-3"></i> <span>+60123456789</span>
+                                        <i data-lucide="phone" class="w-3 h-3"></i> <span id="modal-phone">...</span>
                                     </span>
                                     <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-white text-gray-600 border border-gray-200 shadow-sm">
-                                        <i data-lucide="mail" class="w-3 h-3"></i> <span>alex@example.com</span>
+                                        <i data-lucide="mail" class="w-3 h-3"></i> <span id="modal-email">...</span>
                                     </span>
                                 </div>
                             </div>
@@ -326,7 +321,7 @@ if ($result) {
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="p-4 border border-gray-200 rounded-lg bg-gray-50">
                                 <h5 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Application ID</h5>
-                                <p class="text-sm font-mono font-medium text-gray-900">APP-2023-001</p>
+                                <p id="modal-app-id" class="text-sm font-mono font-medium text-gray-900">...</p>
                             </div>
                             <div class="p-4 border border-gray-200 rounded-lg bg-gray-50">
                                 <h5 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Applying For</h5>
@@ -338,20 +333,19 @@ if ($result) {
 
                         <div>
                             <h5 class="text-sm font-bold text-gray-900 mb-2">Animal Handling Experience</h5>
-                            <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 leading-relaxed min-h-[80px]">
-                                I have been a volunteer at the local shelter for 2 years, primarily walking dogs and cleaning kennels. I also fostered 3 kittens last year.
+                            <div id="modal-experience" class="p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 leading-relaxed min-h-[80px]">
+                                ...
                             </div>
                         </div>
 
                         <div>
                             <h5 class="text-sm font-bold text-gray-900 mb-2">Training / Certification</h5>
-                            <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 leading-relaxed min-h-[80px]">
-                                Certified Pet First Aid (Red Crescent), 2022.
+                            <div id="modal-training" class="p-4 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-700 leading-relaxed min-h-[80px]">
+                                ...
                             </div>
                         </div>
                     </div>
 
-                    <!-- PAGE 2: User Identity (MyKad) (HARDCODED) -->
                     <div id="modal-page-2" class="hidden space-y-6 text-center">
                         <div class="bg-blue-50 p-4 rounded-lg border border-blue-100 inline-block mb-2">
                             <h4 class="text-lg font-bold text-blue-900 flex items-center gap-2 justify-center">
@@ -361,36 +355,32 @@ if ($result) {
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <!-- Front MyKad -->
                             <div class="space-y-3">
                                 <h5 class="font-semibold text-gray-700">MyKad (Front)</h5>
                                 <div class="aspect-[1.58/1] bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center relative overflow-hidden group hover:bg-gray-200 transition-colors">
-                                    <div class="text-gray-500 flex flex-col items-center">
+                                    <img id="modal-mykad-front" src="" class="absolute inset-0 w-full h-full object-contain">
+                                    <div class="text-gray-500 flex flex-col items-center z-10" id="modal-mykad-front-placeholder">
                                         <i data-lucide="credit-card" class="w-10 h-10 mb-2 opacity-50"></i>
-                                        <span class="text-sm font-medium">Front Image</span>
-                                        <span class="text-xs text-gray-400 mt-1">Click to enlarge</span>
+                                        <span class="text-sm font-medium">No Image</span>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Back MyKad -->
                             <div class="space-y-3">
                                 <h5 class="font-semibold text-gray-700">MyKad (Back)</h5>
                                 <div class="aspect-[1.58/1] bg-gray-100 rounded-xl border-2 border-dashed border-gray-300 flex items-center justify-center relative overflow-hidden group hover:bg-gray-200 transition-colors">
-                                    <div class="text-gray-500 flex flex-col items-center">
+                                    <img id="modal-mykad-back" src="" class="absolute inset-0 w-full h-full object-contain">
+                                    <div class="text-gray-500 flex flex-col items-center z-10" id="modal-mykad-back-placeholder">
                                         <i data-lucide="credit-card" class="w-10 h-10 mb-2 opacity-50"></i>
-                                        <span class="text-sm font-medium">Back Image</span>
-                                        <span class="text-xs text-gray-400 mt-1">Click to enlarge</span>
+                                        <span class="text-sm font-medium">No Image</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- PAGE 3: Legal & Background (HARDCODED) -->
                     <div id="modal-page-3" class="hidden space-y-6">
                         
-                        <!-- Section 1: Background Check Consent -->
                         <div class="p-4 rounded-lg border border-green-100 bg-green-50 flex items-start gap-4">
                             <div class="bg-white p-2 rounded-full shadow-sm text-green-600 mt-1 flex-shrink-0">
                                 <i data-lucide="check" class="w-5 h-5"></i>
@@ -401,18 +391,16 @@ if ($result) {
                             </div>
                         </div>
 
-                        <!-- Section 2: Conviction Declaration -->
                         <div class="space-y-3 pt-2">
                             <h4 class="text-sm font-bold text-gray-900 uppercase tracking-wider border-b border-gray-100 pb-2">Disclosure of Prior Conviction</h4>
                             
-                            <!-- Case: No Conviction -->
-                            <div class="p-6 bg-green-50/50 border border-green-100 rounded-lg flex items-center gap-4 text-green-800">
-                                <div class="bg-green-100 p-2 rounded-full flex-shrink-0">
-                                    <i data-lucide="shield-check" class="w-6 h-6 text-green-600"></i>
+                            <div id="modal-conviction-container" class="p-6 bg-green-50/50 border border-green-100 rounded-lg flex items-center gap-4 text-green-800">
+                                <div class="bg-green-100 p-2 rounded-full flex-shrink-0" id="modal-conviction-icon-bg">
+                                    <i data-lucide="shield-check" class="w-6 h-6 text-green-600" id="modal-conviction-icon"></i>
                                 </div>
                                 <div>
-                                    <span class="font-bold block text-green-900">Clean Declaration</span>
-                                    <span class="text-sm">Applicant has declared <strong>NO</strong> prior criminal convictions in the last 5 years.</span>
+                                    <span class="font-bold block text-green-900" id="modal-conviction-title">Clean Declaration</span>
+                                    <span class="text-sm" id="modal-conviction-desc">Applicant has declared <strong>NO</strong> prior criminal convictions in the last 5 years.</span>
                                 </div>
                             </div>
                         </div>
@@ -422,7 +410,6 @@ if ($result) {
                         </div>
                     </div>
 
-                    <!-- PAGE 4: Qualification (License) (HARDCODED) -->
                     <div id="modal-page-4" class="hidden space-y-6">
                         <div class="flex items-center justify-between border-b border-gray-100 pb-2">
                                 <h4 class="text-lg font-bold text-gray-900">Driver's License & Vehicle</h4>
@@ -431,50 +418,54 @@ if ($result) {
                         <div class="grid grid-cols-2 gap-4">
                             <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
                                 <p class="text-xs text-gray-500 uppercase font-bold mb-1">License Class</p>
-                                <p class="text-lg font-bold text-gray-900">Class D (Car)</p>
+                                <p id="modal-license-class" class="text-lg font-bold text-gray-900">...</p>
                             </div>
                             <div class="p-4 bg-gray-50 rounded-lg border border-gray-200">
                                 <p class="text-xs text-gray-500 uppercase font-bold mb-1">Vehicle Availability</p>
-                                <p class="text-lg font-bold text-gray-900">Toyota Rav4</p>
+                                <p id="modal-vehicle" class="text-lg font-bold text-gray-900">...</p>
                             </div>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
-                            <!-- License Front -->
                             <div class="space-y-2">
                                 <h5 class="font-semibold text-gray-700 text-sm text-center">License (Front)</h5>
-                                <div class="aspect-[1.58/1] bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
-                                    <i data-lucide="car-front" class="w-8 h-8 text-gray-400"></i>
+                                <div class="aspect-[1.58/1] bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center relative overflow-hidden">
+                                    <img id="modal-license-front" src="" class="absolute inset-0 w-full h-full object-contain">
+                                    <div class="text-gray-500 flex flex-col items-center z-10" id="modal-license-front-placeholder">
+                                        <i data-lucide="car-front" class="w-8 h-8 text-gray-400"></i>
+                                    </div>
                                 </div>
                             </div>
-                            <!-- License Back -->
                             <div class="space-y-2">
                                 <h5 class="font-semibold text-gray-700 text-sm text-center">License (Back)</h5>
-                                <div class="aspect-[1.58/1] bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
-                                    <i data-lucide="car-front" class="w-8 h-8 text-gray-400"></i>
+                                <div class="aspect-[1.58/1] bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center relative overflow-hidden">
+                                    <img id="modal-license-back" src="" class="absolute inset-0 w-full h-full object-contain">
+                                    <div class="text-gray-500 flex flex-col items-center z-10" id="modal-license-back-placeholder">
+                                        <i data-lucide="car-front" class="w-8 h-8 text-gray-400"></i>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- PAGE 5: Signature & Decision (HARDCODED) -->
                     <div id="modal-page-5" class="hidden space-y-8 text-center pt-4">
                         
                         <div class="max-w-md mx-auto bg-gray-50 p-6 rounded-xl border border-gray-200">
                             <h5 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Applicant Signature Declaration</h5>
                             <div class="h-32 bg-white border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center">
-                                <p class="font-handwriting text-3xl text-gray-700 italic select-none" style="font-family: cursive;">Alex Martinez</p>
+                                <img id="modal-signature-img" src="" class="max-h-full max-w-full object-contain hidden p-2" alt="Digital Signature">
+                                <p id="modal-signature-name" class="font-handwriting text-3xl text-gray-700 italic select-none" style="font-family: cursive;">...</p>
                             </div>
-                            <p class="text-xs text-gray-400 mt-2">Digitally Signed on <span class="text-gray-600 font-medium">Oct 24, 2023 at 10:42 AM</span></p>
+                            <p class="text-xs text-gray-400 mt-2">Digitally Signed on <span id="modal-signed-date" class="text-gray-600 font-medium">...</span></p>
                         </div>
 
                         <div class="border-t border-gray-100 pt-6" id="modal-actions">
                             <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                                <button onclick="window.closeAdminModal()" class="flex-1 sm:flex-none px-8 py-3 bg-white text-red-600 border border-red-200 hover:bg-red-50 hover:border-red-300 font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-2">
-                                    <i class="fa-solid fa-xmark"></i> Reject Application
+                                <button type="button" onclick="submitDecision('rejected')" class="flex-1 sm:flex-none px-8 py-3 bg-white text-red-600 border border-red-200 hover:bg-red-50 hover:border-red-300 font-bold rounded-xl transition-all shadow-sm flex items-center justify-center gap-2">
+                                    <i data-lucide="x-circle" class="w-5 h-5"></i> Reject Application
                                 </button>
-                                <button onclick="window.closeAdminModal()" class="flex-1 sm:flex-none px-8 py-3 bg-green-600 text-white hover:bg-green-700 font-bold rounded-xl transition-all shadow-lg shadow-green-200 flex items-center justify-center gap-2">
-                                    <i class="fa-solid fa-check"></i> Approve Application
+                                <button type="button" onclick="submitDecision('approved')" class="flex-1 sm:flex-none px-8 py-3 bg-green-600 text-white hover:bg-green-700 font-bold rounded-xl transition-all shadow-lg shadow-green-200 flex items-center justify-center gap-2">
+                                    <i data-lucide="check-circle" class="w-5 h-5"></i> Approve Application
                                 </button>
                             </div>
                         </div>
@@ -482,7 +473,6 @@ if ($result) {
 
                 </div>
 
-                <!-- Footer Navigation -->
                 <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 rounded-b-xl flex justify-between items-center">
                     <button onclick="window.closeAdminModal()" class="text-gray-500 hover:text-gray-800 font-medium px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">
                         Cancel
