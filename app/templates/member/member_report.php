@@ -74,6 +74,10 @@ requireRole(['user', 'volunteer']);
     <div class="lg:w-5/12 bg-white rounded-3xl p-6 lg:p-8 shadow-xl border border-white flex flex-col h-auto lg:h-full overflow-y-auto">
         <form onsubmit="handleEmergencySubmit(event)" id="emergency-form" class="flex flex-col h-full gap-6">
             
+            <input type="hidden" id="latitude" name="latitude">
+            <input type="hidden" id="longitude" name="longitude">
+            <input type="hidden" id="full-address" name="location_address">
+
             <div class="space-y-8">
                 <div class="flex items-center justify-between">
                     <h3 class="text-xl font-extrabold text-gray-800">Rescue Details</h3>
@@ -141,8 +145,16 @@ requireRole(['user', 'volunteer']);
 
                 <!-- Minimal Textarea -->
                 <div class="flex-1">
-                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 block">Notes</label>
-                    <textarea class="w-full bg-gray-50 border-0 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-orange-500 min-h-[100px]" placeholder="Briefly describe the injury or condition..."></textarea>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 block">Notes
+                        <span id="desc-char-count" class="text-gray-400 font-normal ml-2 lowercase">300 out of 300 characters remaining</span>
+                    </label>
+                    <textarea 
+                        name="description"
+                        id="description-input"
+                        maxlength="300"
+                        oninput="updateCharCount(this, 'desc-char-count', 300)"
+                        class="w-full bg-gray-50 border-0 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-orange-500 min-h-[100px]" 
+                        placeholder="Briefly describe the injury or condition..."></textarea>
                 </div>
             </div>
 

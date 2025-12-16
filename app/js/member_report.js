@@ -127,6 +127,10 @@ window.panToCurrentLocation = function() {
                     lat: position.coords.latitude,
                     lng: position.coords.longitude,
                 };
+
+                document.getElementById('latitude').value = pos.lat;
+                document.getElementById('longitude').value = pos.lng;
+
                 mapInstance.setCenter(pos);
                 mapInstance.setZoom(17);
             },
@@ -142,12 +146,21 @@ window.panToCurrentLocation = function() {
 
 function geocodePosition(pos) {
     const input = document.getElementById('location-input');
+    const hiddenAddress = document.getElementById('full-address');
+    const hiddenLat = document.getElementById('latitude');
+    const hiddenLng = document.getElementById('longitude');
+
+    hiddenLat.value = pos.lat();
+    hiddenLng.value = pos.lng();
     
     geocoderInstance.geocode({ location: pos }, (results, status) => {
         if (status === "OK") {
             if (results[0]) {
                 // Clean up address for display (remove country if too long)
                 let address = results[0].formatted_address;
+
+                hiddenAddress.value = address;
+
                 // Simplification for UI
                 input.value = address.split(',').slice(0, 3).join(', ');
             } else {
@@ -220,3 +233,61 @@ window.removePhoto = function(btn, fileName) {
     document.getElementById('photo-counter').innerText = `${selectedPhotos.length}/${MAX_PHOTOS}`;
     document.getElementById('add-photo-btn').classList.remove('hidden');
 }
+
+// --- Submission Logic ---
+window.handleEmergencySubmit = async function(event) {
+    event.preventDefault();
+    const submitBtn = document.getElementById('submit-emergency-btn');
+    const descriptionInput = document.getElementById('description-input');
+    
+    // 1. Validation
+    if (selectedPhotos.length < 1) {
+        showErrorModal("Missing Evidence", "Please upload at least 1 photo of the animal/situation.");
+        return;
+    }
+
+    if (!document.getElementById('latitude').value || !document.getElementById('full-address').value) {
+        showErrorModal("Location Required", "Please allow the map to finish locating the position.");
+        return;
+    }
+
+    if (!descriptionInput.value.trim()) {
+        showErrorModal("Notes Required", "Please provide a brief description in the notes.");
+        return;
+    }
+
+    // 2. Prepare Data
+    const formData = new FormData(event.target);
+    
+    // Append photos manually (since manipulated them in the JS array `selectedPhotos`)
+    selectedPhotos.forEach((file, index) => {
+        formData.append(`photo_evidence_${index + 1}`, file);
+    });
+
+    // 3. UI Feedback
+    const originalBtnContent = submitBtn.innerHTML;
+    submitBtn.innerHTML = `<span class="animate-pulse">Submitting...</span>`;
+    submitBtn.disabled = true;
+
+    try {
+        const response = await fetch('../api/submit_emergency.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showSuccessModal("Report Submitted", "Help is on the way! The rescue team has been notified.", 'fa-solid fa-check-circle text-orange-500', () => {
+                window.location.reload(); 
+            });
+        } else {
+            throw new Error(result.message || "Submission failed");
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showErrorModal("Submission Error", error.message);
+        submitBtn.innerHTML = originalBtnContent;
+        submitBtn.disabled = false;
+    }
+};
