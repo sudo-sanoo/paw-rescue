@@ -3,7 +3,7 @@
 require_once __DIR__ . '/../../includes/session_check.php';
 require_once __DIR__ . '/../../includes/db.php';
 
-requireRole(['user', 'volunteer', 'veterinarian']);
+requireRole(['user', 'volunteer']);
 ?>
 
 <!-- VIEW: Report Emergency (Form) -->

@@ -93,28 +93,43 @@ $initials = getInitials($user['full_name']);
                     <i data-lucide="layout-dashboard" class="w-5 h-5 shrink-0"></i>
                     <span>Home</span>
                 </button>
+                <!-- NO.2 to NO.5 is for 'member' and 'volunteer' (Legacy), displayed as 'volunteer' and 'rescuer' respectively in the system -->
                 <!-- 2. Report Emergency (Highlighted) -->
+                <?php if ($role_identifier === 'user' || $role_identifier === 'volunteer'): ?>
                 <button onclick="switchTab('report')" id="nav-report" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900 group">
                     <div class="bg-red-100 text-red-500 p-1.4 rounded-md group-hover:bg-red-500 group-hover:text-white transition-colors">
                         <i data-lucide="siren" class="w-4 h-4 shrink-0"></i>
                     </div>
                     <span class="font-semibold text-gray-700 group-hover:text-red-600">Report Emergency</span>
                 </button>
+                <?php endif; ?>
                 <!-- 3. My Reports (Activity) -->
+                <?php if ($role_identifier === 'user' || $role_identifier === 'volunteer'): ?>
                 <button onclick="switchTab('activity')" id="nav-activity" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900">
                     <i data-lucide="activity" class="w-5 h-5 shrink-0"></i>
                     <span>My Reports</span>
                 </button>
+                <?php endif; ?>
                 <!-- 4. Adopt -->
+                <?php if ($role_identifier === 'user' || $role_identifier === 'volunteer'): ?>
                 <button onclick="switchTab('adopt')" id="nav-adopt" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900">
                     <i data-lucide="heart-handshake" class="w-5 h-5 shrink-0"></i>
                     <span>Adopt</span>
                 </button>
+                <?php endif; ?>
                 <!-- 5. Become Volunteer -->
                 <?php if ($role_identifier === 'user'): ?>
                 <button onclick="switchTab('join')" id="nav-join" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900">
                     <i data-lucide="medal" class="w-5 h-5 shrink-0"></i>
                     <span>Become a Hero</span>
+                </button>
+                <?php endif; ?>
+                <!-- NO.6 is for Veterinarian -->
+                <!-- 6. Veterinarian Treatment Report -->
+                <?php if ($role_identifier === 'veterinarian'): ?>
+                <button onclick="switchTab('vet_treatment_report')" id="nav-vet_treatment_report" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                    <i data-lucide="square-activity" class="w-5 h-5 shrink-0"></i>
+                    <span>Treatment Report</span>
                 </button>
                 <?php endif; ?>
             </nav>
@@ -174,6 +189,7 @@ $initials = getInitials($user['full_name']);
                     <!-- VIEW: Home (Feed & Impact) -->
                     <div id="view-home" class="animate-fade-in space-y-8">
                         <!-- Hero Section -->
+                        <?php if ($role_identifier === 'user' || $role_identifier === 'volunteer'): ?>
                         <div class="bg-gradient-to-r from-orange-500 to-amber-500 rounded-2xl p-8 text-white shadow-lg relative overflow-hidden">
                             <div class="relative z-10 max-w-lg">
                                 <h1 class="text-3xl font-bold mb-2">Every Second Counts</h1>
@@ -185,6 +201,7 @@ $initials = getInitials($user['full_name']);
                             </div>
                             <i class="fa-solid fa-dog absolute -bottom-4 -right-4 text-9xl text-white opacity-10 rotate-12"></i>
                         </div>
+                        <?php endif; ?>
 
                         <!-- Recent Success Stories -->
                         <div>

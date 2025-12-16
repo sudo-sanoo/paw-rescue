@@ -99,7 +99,7 @@ if ($result) {
                 <p class="text-gray-500 text-sm font-medium">Total Rescuers</p>
                 <h3 class="text-2xl font-bold text-gray-800 mt-1"><?php echo htmlspecialchars($stats['total_volunteers']); ?></h3>
             </div>
-            <div class="w-10 h-10 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center">
+            <div class="w-10 h-10 rounded-full bg-green-100 text-green-600 flex items-center justify-center">
                 <i data-lucide="users" class="w-5 h-5"></i>
             </div>
         </div>
