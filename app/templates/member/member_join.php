@@ -348,7 +348,7 @@ $show_form = !$has_application || ($app_data['status'] === 'rejected' && $app_da
                             <div id="license-status-menu" class="custom-dropdown-menu hidden absolute left-0 top-full mt-2 w-full bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden dropdown-enter z-50">
                                 <div class="p-1">
                                     <button onclick="selectCustomOption('license-status', 'full', 'Full License (D/DA)')" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-lg transition-colors">Full License (D/DA)</button>
-                                    <button onclick="selectCustomOption('license-status', 'probation', 'Probationary (P)')" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-lg transition-colors">Probationary (P)</button>
+                                    <button onclick="selectCustomOption('license-status', 'probationary', 'Probationary (P)')" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-lg transition-colors">Probationary (P)</button>
                                     <button onclick="selectCustomOption('license-status', 'motorcycle', 'Motorcycle Only')" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-green-50 hover:text-green-700 rounded-lg transition-colors">Motorcycle Only</button>
                                 </div>
                             </div>
