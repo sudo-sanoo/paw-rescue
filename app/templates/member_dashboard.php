@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../includes/session_check.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/helper_func.php';
+require_once __DIR__ . '/../includes/config.php';
 
 requireRole(['user', 'volunteer', 'veterinarian']);
 
@@ -56,6 +57,10 @@ $initials = getInitials($user['full_name']);
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
+    <!-- GOOGLE MAPS API (GOOGLE MAPS JAVASCRIPT & GEOCODING)-->
+    <script>
+        const GOOGLE_MAPS_KEY = "<?php echo GOOGLE_MAPS_API_KEY; ?>";
+    </script>
     <!-- JS -->
     <script defer src="../js/member_templates.js"></script>
     <script defer src="../js/mykad_service.js"></script>

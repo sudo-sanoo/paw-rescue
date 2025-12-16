@@ -2,6 +2,7 @@
 <?php
 require_once __DIR__ . '/../../includes/session_check.php';
 require_once __DIR__ . '/../../includes/db.php';
+require_once __DIR__ . '/../../includes/config.php';
 
 requireRole(['user', 'volunteer']);
 ?>
@@ -12,23 +13,16 @@ requireRole(['user', 'volunteer']);
     <!-- 1. Visual Context (Map & Photo) -->
     <div class="lg:w-7/12 flex flex-col gap-4 h-[500px] lg:h-full">
         <!-- Map Card -->
-        <div class="flex-1 bg-blue-50 rounded-3xl relative overflow-hidden group min-h-[300px] border-4 border-white shadow-lg shadow-blue-100/50">
-            <!-- Map Background Placeholder -->
-            <div class="absolute inset-0 bg-gray-200 flex items-center justify-center overflow-hidden">
-                    <!-- Abstract Map Pattern -->
-                <div class="absolute inset-0 opacity-10" style="background-image: radial-gradient(#444 1px, transparent 1px); background-size: 20px 20px;"></div>
-                <div class="absolute inset-0 opacity-20 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-                <!-- Roads simulation -->
-                <div class="absolute top-0 bottom-0 left-1/3 w-8 bg-white/40 transform -skew-x-12"></div>
-                <div class="absolute top-1/2 left-0 right-0 h-6 bg-white/40 transform rotate-3"></div>
-            </div>
-            <div class="absolute inset-0 bg-gradient-to-t from-gray-900/10 to-transparent"></div>
-            
-            <!-- Center Pin -->
-            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center group-hover:-translate-y-[60%] transition-transform duration-300">
-                <div class="w-4 h-4 bg-orange-500 rounded-full animate-ping absolute"></div>
-                <i class="fa-solid fa-location-dot text-5xl text-orange-600 drop-shadow-xl z-10"></i>
-                <div class="bg-gray-900 text-white px-3 py-1 rounded-full shadow-lg text-xs font-bold mt-2 opacity-0 group-hover:opacity-100 transition-opacity">Drag map to pin</div>
+        <div class="flex-1 bg-gray-100 rounded-3xl relative overflow-hidden group min-h-[300px] border-4 border-white shadow-lg shadow-blue-100/50">
+                                
+            <!-- THE GOOGLE MAP -->
+            <div id="google-map" class="absolute inset-0 w-full h-full bg-gray-200"></div>
+
+            <!-- Center Pin Overlay (Stays fixed while map moves) -->
+            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10 pb-9">
+                <div class="w-4 h-4 bg-orange-500 rounded-full animate-ping absolute top-[28px]"></div>
+                <i class="fa-solid fa-location-dot text-5xl text-orange-600 drop-shadow-xl z-10 relative"></i>
+                <div class="w-2 h-2 bg-black opacity-20 rounded-full absolute bottom-[5px] blur-[1px]"></div>
             </div>
 
             <!-- Location Input Overlay -->
@@ -37,10 +31,18 @@ requireRole(['user', 'volunteer']);
                     <div class="p-2 bg-gray-100 rounded-xl text-gray-400">
                         <i data-lucide="search" class="w-4 h-4"></i>
                     </div>
-                    <input type="text" id="location-input" class="bg-transparent border-none text-sm w-full focus:ring-0 font-medium text-gray-700" placeholder="Confirm location...">
-                    <button onclick="getLocation()" class="bg-blue-50 text-blue-600 p-2 rounded-xl hover:bg-blue-100 transition-colors">
+                    <input type="text" id="location-input" class="bg-transparent border-none text-sm w-full focus:ring-0 font-medium text-gray-700" placeholder="Searching location..." readonly>
+                    <button onclick="panToCurrentLocation()" class="bg-blue-50 text-blue-600 p-2 rounded-xl hover:bg-blue-100 transition-colors" title="My Location">
                         <i data-lucide="crosshair" class="w-4 h-4"></i>
                     </button>
+                </div>
+            </div>
+
+            <!-- Map Loading State -->
+            <div id="map-loader" class="absolute inset-0 bg-gray-100 flex items-center justify-center z-0">
+                <div class="flex flex-col items-center gap-2">
+                    <div class="loader !border-gray-300 !border-t-orange-500"></div>
+                    <span class="text-xs text-gray-500">Loading Map...</span>
                 </div>
             </div>
         </div>
@@ -75,12 +77,11 @@ requireRole(['user', 'volunteer']);
             <div class="space-y-8">
                 <div class="flex items-center justify-between">
                     <h3 class="text-xl font-extrabold text-gray-800">Rescue Details</h3>
-                    <span class="text-xs font-bold bg-red-100 text-red-600 px-2 py-1 rounded uppercase">Urgent</span>
                 </div>
                 
                 <!-- Animal Selector (Pills) -->
                 <div>
-                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 block">Subject</label>
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 block">Animal</label>
                     <div class="flex flex-wrap gap-2">
                         <label class="cursor-pointer flex-1 min-w-[80px]">
                             <input type="radio" name="animal_type" value="dog" class="peer sr-only" checked>

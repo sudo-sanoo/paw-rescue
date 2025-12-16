@@ -79,3 +79,5 @@ body {
 .photo-thumbnail:hover .remove-btn {
     opacity: 1;
 }
+
+.gmnoprint, .gm-control-active { display: none !important; }

@@ -355,8 +355,19 @@ function afterPageLoad(tabId) {
     if(view) view.classList.remove('hidden');
 
     if (tabId === 'join') {
-        // We use setTimeout to ensure the DOM render is complete
+        // use setTimeout to ensure the DOM render is complete
         setTimeout(() => initSignaturePad(), 0);
+    }
+
+    if (tabId === 'report') {
+        // use setTimeout to ensure the #google-map div is rendered and has height
+        setTimeout(() => {
+            if (typeof window.initReportPage === 'function') {
+                window.initReportPage();
+            } else {
+                console.error("initReportPage() not found. Make sure member_report.js is included in member_dashboard.php");
+            }
+        }, 200);
     }
 
     // Page-specific initializers

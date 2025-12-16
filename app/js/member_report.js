@@ -1,17 +1,162 @@
 // --- Emergency Form Logic ---
 
-// Mock Geolocation
-function getLocation() {
+// --- GOOGLE MAPS LOGIC ---
+// Global variable to track the map instance
+let mapInstance;
+let geocoderInstance;
+
+/**
+ * 1. The Entry Point
+ * Call this function immediately after AJAX .innerHTML insertion finishes.
+ */
+window.initReportPage = function() {
+    loadGoogleMapsAPI()
+        .then(() => {
+            renderMap();
+        })
+        .catch(err => console.error("Maps API Load Error:", err));
+};
+
+/**
+ * 2. Dynamic Script Loader
+ * Checks if Google Maps is already loaded. If not, injects the script tag.
+ */
+let googleMapsLoadingPromise = null;
+
+function loadGoogleMapsAPI() {
+    // 1. If API is already fully loaded and ready
+    if (window.google && window.google.maps && window.google.maps.importLibrary) {
+        return Promise.resolve();
+    }
+
+    // 2. If a request is already in progress, return that existing promise
+    if (googleMapsLoadingPromise) {
+        return googleMapsLoadingPromise;
+    }
+
+    // 3. Initialize the loading process
+    googleMapsLoadingPromise = new Promise((resolve, reject) => {
+        // Create a unique global callback name
+        const callbackName = 'googleMapsInitCallback';
+
+        // Define the global callback that Google Maps will trigger
+        window[callbackName] = () => {
+            resolve();
+            delete window[callbackName]; // Clean up
+        };
+
+        const script = document.createElement('script');
+        // KEY FIX: Add &callback=googleMapsInitCallback
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_KEY}&libraries=places&loading=async&v=weekly&callback=${callbackName}`;
+        script.id = 'gmaps-script';
+        script.async = true;
+        script.defer = true;
+        
+        script.onerror = (err) => {
+            googleMapsLoadingPromise = null; // Reset promise on error so we can try again
+            reject(err);
+        };
+        
+        document.head.appendChild(script);
+    });
+
+    return googleMapsLoadingPromise;
+}
+
+/**
+ * 3. The Actual Map Logic (Universal Version)
+ * Handles both Modern (importLibrary) and Legacy (global google.maps) loading modes.
+ */
+async function renderMap() {
+    const mapEl = document.getElementById("google-map");
+    if (!mapEl) return;
+
+    // Define variables for the classes we need
+    let MapClass, GeocoderClass;
+
+    // CHECK: Does this version support dynamic import? (Modern Mode)
+    if (google.maps.importLibrary) {
+        const { Map } = await google.maps.importLibrary("maps");
+        const { Geocoder } = await google.maps.importLibrary("geocoding");
+        MapClass = Map;
+        GeocoderClass = Geocoder;
+    } 
+    // FALLBACK: Use global objects (Legacy Mode)
+    else {
+        MapClass = google.maps.Map;
+        GeocoderClass = google.maps.Geocoder;
+    }
+
+    // Remove loading indicator
+    const loader = document.getElementById('map-loader');
+    if(loader) loader.classList.add('hidden');
+    
+    // Initialize Map using the resolved class
+    const defaultCenter = { lat: 6.028609836669974, lng: 116.12939120708417 }; // TARUMT Sabah Branch
+    
+    mapInstance = new MapClass(mapEl, {
+        center: defaultCenter,
+        zoom: 15,
+        disableDefaultUI: true,
+        zoomControl: false,
+        gestureHandling: "greedy",
+        styles: [{ "featureType": "poi", "elementType": "labels", "stylers": [{ "visibility": "off" }] }]
+    });
+
+    geocoderInstance = new GeocoderClass();
+
+    mapInstance.addListener("idle", () => {
+        const center = mapInstance.getCenter();
+        geocodePosition(center);
+    });
+
+    // Trigger location search
+    panToCurrentLocation();
+}
+
+window.panToCurrentLocation = function() {
     const input = document.getElementById('location-input');
     
-    // Simulate loading
-    input.setAttribute('placeholder', 'Locating...');
+    // Check if mapInstance exists, not isMapInitialized
+    if (navigator.geolocation && mapInstance) {
+        input.value = "Locating...";
+        
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const pos = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude,
+                };
+                mapInstance.setCenter(pos);
+                mapInstance.setZoom(17);
+            },
+            (error) => {
+                console.error("Geolocation failed:", error);
+                input.value = "Location access denied. Please drag map.";
+            }
+        );
+    } else {
+        console.log("Map not ready or Geolocation not supported");
+    }
+}
+
+function geocodePosition(pos) {
+    const input = document.getElementById('location-input');
     
-    setTimeout(() => {
-        input.value = "Central Park, Near West Entrance";
-        // Visual feedback
-        input.focus();
-    }, 800);
+    geocoderInstance.geocode({ location: pos }, (results, status) => {
+        if (status === "OK") {
+            if (results[0]) {
+                // Clean up address for display (remove country if too long)
+                let address = results[0].formatted_address;
+                // Simplification for UI
+                input.value = address.split(',').slice(0, 3).join(', ');
+            } else {
+                input.value = "Unknown location";
+            }
+        } else {
+            input.value = "Cannot determine address";
+        }
+    });
 }
 
 // Photo Gallery Logic
@@ -63,14 +208,13 @@ function handlePhotoUpload(input) {
     }
 }
 
-function removePhoto(btn, fileName) {
+window.removePhoto = function(btn, fileName) {
     // Remove from DOM
     const container = btn.closest('.photo-thumbnail');
     container.remove();
     
-    // Remove from Array (Mock logic based on index or name)
-    // In a real app we'd track IDs, here we just pop or filter
-    selectedPhotos.pop(); 
+    // Remove from Array
+    selectedPhotos = selectedPhotos.filter(f => f.name !== fileName);
 
     // Update UI State
     document.getElementById('photo-counter').innerText = `${selectedPhotos.length}/${MAX_PHOTOS}`;
