@@ -51,3 +51,31 @@ body {
 /* Step Progress for My Activity */
 .step-connector { position: absolute; top: 2rem; bottom: 0; left: 1rem; width: 2px; background-color: #e5e7eb; z-index: 0; }
 .step-item:last-child .step-connector { display: none; }
+
+/* Urgency Specific Colors */
+.urgency-critical:checked + div { border-color: #ef4444; background-color: #fef2f2; color: #b91c1c; }
+.urgency-serious:checked + div { border-color: #f97316; background-color: #fff7ed; color: #c2410c; }
+.urgency-minor:checked + div { border-color: #eab308; background-color: #fefce8; color: #a16207; }
+
+.loader {
+    border: 3px solid #f3f3f3;
+    border-radius: 50%;
+    border-top: 3px solid #ffffff; /* White for the new orange button */
+    width: 20px;
+    height: 20px;
+    -webkit-animation: spin 1s linear infinite; /* Safari */
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Photo Gallery Styles */
+.photo-thumbnail {
+    transition: all 0.2s ease;
+}
+.photo-thumbnail:hover .remove-btn {
+    opacity: 1;
+}
