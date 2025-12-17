@@ -379,6 +379,7 @@ function afterPageLoad(tabId) {
 const tabTitles = {
     'dashboard': 'Home',
     'report':    'Report Emergency',
+    'rescuer_emergencies': 'Emergencies Now',
     'activity':  'My Reports',
     'adopt':     'Adopt an Animal',
     'join':      'Rescuer Application',

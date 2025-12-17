@@ -1,0 +1,357 @@
+<!-- member_rescuer_emergencies.php -->
+<?php
+require_once __DIR__ . '/../../includes/session_check.php';
+require_once __DIR__ . '/../../includes/db.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/helper_func.php';
+
+requireRole(['volunteer', 'veterinarian']);
+
+$upload_path = "../../images/uploads";
+
+// 1. Fetch Emergencies (Pending status, sorted by newest)
+// Joining with users table to get reporter details
+$sql = "SELECT 
+            e.*,
+            e.created_at AS emergency_timestamp,
+            u.full_name,
+            u.phone, 
+            u.profile_photo 
+        FROM emergencies e 
+        JOIN users u ON e.user_id = u.user_id 
+        WHERE e.status = 'pending' 
+        ORDER BY 
+            FIELD(e.urgency, 'critical', 'serious', 'minor') ASC, 
+            e.created_at ASC";
+
+$stmt = $conn->prepare($sql);
+$stmt->execute();
+$result = $stmt->get_result();
+$emergencies = $result->fetch_all(MYSQLI_ASSOC);
+
+// 2. Calculate Counts
+$stats = [
+    'all' => count($emergencies),
+    'critical' => 0,
+    'serious' => 0,
+    'minor' => 0
+];
+
+foreach ($emergencies as $e) {
+    if (isset($stats[$e['urgency']])) {
+        $stats[$e['urgency']]++;
+    }
+}
+
+// 3. Styling Maps
+$urgencyStyles = [
+    'critical' => [
+        'bg' => 'bg-red-600', 
+        'badge_bg' => 'bg-red-100', 
+        'badge_text' => 'text-red-700', 
+        'badge_border' => 'border-red-200',
+        'icon' => 'siren'
+    ],
+    'serious' => [
+        'bg' => 'bg-orange-500', 
+        'badge_bg' => 'bg-orange-100', 
+        'badge_text' => 'text-orange-700', 
+        'badge_border' => 'border-orange-200',
+        'icon' => 'alert-triangle'
+    ],
+    'minor' => [
+        'bg' => 'bg-blue-500', 
+        'badge_bg' => 'bg-blue-100', 
+        'badge_text' => 'text-blue-700', 
+        'badge_border' => 'border-blue-200',
+        'icon' => 'info'
+    ]
+];
+
+?>
+
+<!-- VIEW: Rescuer Emergencies -->
+<div id="view-rescuer_emergency" class="animate-fade-in max-w-5xl mx-auto space-y-6">
+    
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+        <div class="flex flex-wrap gap-2">
+            <button class="px-4 py-1.5 bg-gray-800 text-white text-sm rounded-full font-medium shadow-sm transition hover:bg-gray-700">All (<?= $stats['all'] ?>)</button>
+            <button class="px-4 py-1.5 bg-red-100 text-red-700 text-sm rounded-full font-medium border border-red-200 transition hover:bg-red-200">Critical (<?= $stats['critical'] ?>)</button>
+            <button class="px-4 py-1.5 bg-orange-100 text-orange-700 text-sm rounded-full font-medium border border-orange-200 transition hover:bg-orange-200">Serious (<?= $stats['serious'] ?>)</button>
+            <button class="px-4 py-1.5 bg-blue-100 text-blue-700 text-sm rounded-full font-medium border border-blue-200 transition hover:bg-blue-200">Minor (<?= $stats['minor'] ?>)</button>
+        </div>
+    </div>
+
+    <div id="emergencies-list-container" class="space-y-4">
+
+        <?php if (empty($emergencies)): ?>
+            <div class="text-center py-12 text-gray-500 bg-white rounded-xl border border-gray-200">
+                <i data-lucide="check-circle" class="w-12 h-12 mx-auto mb-3 text-green-500"></i>
+                <p>No pending emergencies at the moment.</p>
+            </div>
+        <?php else: ?>
+            
+            <?php foreach ($emergencies as $row): 
+                $style = $urgencyStyles[$row['urgency']] ?? $urgencyStyles['minor'];
+                $timeAgo = time_elapsed_string($row['emergency_timestamp']);
+
+                $row['photo_url'] = $row['profile_photo'] 
+                    ? "$upload_path/avatars/{$row['profile_photo']}"
+                    : "https://ui-avatars.com/api/?name=" . urlencode($row['full_name']);
+
+                $evidenceBase = "$upload_path/emergencies/" . $row['emergency_id'] . "/";
+                
+                $photos = [];
+                if ($row['photo_evidence_1']) $photos[] = $evidenceBase . basename($row['photo_evidence_1']);
+                if ($row['photo_evidence_2']) $photos[] = $evidenceBase . basename($row['photo_evidence_2']);
+                if ($row['photo_evidence_3']) $photos[] = $evidenceBase . basename($row['photo_evidence_3']);
+                
+                $photosJson = htmlspecialchars(json_encode($photos), ENT_QUOTES, 'UTF-8');
+            ?>
+
+            <div onclick="openDynamicModal('modal-<?= $row['emergency_id'] ?>', <?= $photosJson ?>, <?= $row['latitude'] ?? 0 ?>, <?= $row['longitude'] ?? 0 ?>)" 
+                    class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative transition hover:shadow-md cursor-pointer group">
+                <div class="absolute left-0 top-0 bottom-0 w-2 <?= $style['bg'] ?>"></div>
+                
+                <div class="p-5 pl-7">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-xs font-mono text-gray-400">#<?= htmlspecialchars($row['emergency_id']) ?></span>
+                                <span class="pulse-red inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold <?= $style['bg'] ?> text-white">
+                                    <i data-lucide="<?= $style['icon'] ?>" class="w-3 h-3"></i> <?= strtoupper($row['urgency']) ?>
+                                </span>
+                            </div>
+                            <h3 class="text-lg font-bold text-gray-900 flex items-center flex-wrap gap-2">
+                                <?= htmlspecialchars($row['full_name']) ?>
+                                <span class="text-sm font-normal text-gray-500 flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded-md">
+                                    <i class="fa-solid fa-phone text-xs"></i> <?= htmlspecialchars($row['phone']) ?>
+                                </span>
+                            </h3>
+                        </div>
+                        <div class="text-right shrink-0">
+                            <div class="text-2xl font-bold <?= str_replace('bg-', 'text-', $style['bg']) ?>"><?= strtoupper($timeAgo) ?></div>
+                            <div class="text-xs text-gray-500 uppercase tracking-wide">Ago</div>
+                        </div>
+                    </div>
+
+                    <p class="mt-3 text-gray-700 leading-relaxed">
+                        "<?= htmlspecialchars($row['description']) ?>"
+                    </p>
+
+                    <div class="mt-4 flex gap-3">
+
+                        <?php foreach ($photos as $photo): ?>
+                            <div class="relative rounded-lg bg-gray-200 overflow-hidden cursor-pointer group w-24 h-24 shrink-0">
+                                <img src="<?= htmlspecialchars($photo) ?>" class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
+                            </div>
+                        <?php endforeach; ?>
+                        <?php if (empty($photos)): ?>
+                            <div class="h-24 flex items-center text-gray-400 text-xs italic">No photos provided</div>
+                        <?php endif; ?>
+
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-sm">
+                        <div class="flex items-center gap-2 text-gray-600">
+                            <i data-lucide="map-pin" class="w-4 h-4 text-red-500"></i>
+                            <span class="truncate max-w-md"><?= htmlspecialchars($row['location_address']) ?></span>
+                        </div>
+                        <div class="flex items-center gap-1 text-blue-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span>View Details</span>
+                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </div>
+</div>
+
+<?php foreach ($emergencies as $row): 
+    $style = $urgencyStyles[$row['urgency']] ?? $urgencyStyles['minor'];
+    
+    $row['photo_url'] = $row['profile_photo'] 
+        ? "$upload_path/avatars/{$row['profile_photo']}"
+        : "https://ui-avatars.com/api/?name=" . urlencode($row['full_name']);
+
+    $evidenceBase = "$upload_path/emergencies/" . $row['emergency_id'] . "/";
+    
+    $photos = [];
+    if ($row['photo_evidence_1']) $photos[] = $evidenceBase . basename($row['photo_evidence_1']);
+    if ($row['photo_evidence_2']) $photos[] = $evidenceBase . basename($row['photo_evidence_2']);
+    if ($row['photo_evidence_3']) $photos[] = $evidenceBase . basename($row['photo_evidence_3']);
+    
+    $photosJson = htmlspecialchars(json_encode($photos), ENT_QUOTES, 'UTF-8');
+?>
+
+<!-- EMERGENCY DETAIL MODAL -->
+<div id="modal-<?= $row['emergency_id'] ?>" class="fixed inset-0 z-50 hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+    <!-- Backdrop -->
+    <div onclick="closeEmergencyModal('modal-<?= $row['emergency_id'] ?>')" class="absolute inset-0 bg-black bg-opacity-70 backdrop-blur-sm"></div>
+    
+    <!-- Modal Content Panel (Width increased to max-w-7xl) -->
+    <div class="relative w-full max-w-7xl h-[95vh] md:h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden transform scale-95 transition-transform duration-300 mx-4" id="modal-panel-<?= $row['emergency_id'] ?>">
+        
+        <!-- Modal Header -->
+        <div class="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10 shrink-0">
+            <div class="flex items-center gap-4">
+                <span class="<?= $style['bg'] ?> text-white px-3 py-1 rounded-full text-sm font-bold shadow-sm animate-pulse">
+                    <i class="fa-solid fa-circle-exclamation mr-1"></i> <?= strtoupper($row['urgency']) ?>
+                </span>
+                <span class="text-gray-400 font-mono text-lg">#<?= $row['emergency_id'] ?></span>
+            </div>
+            <button onclick="closeEmergencyModal('modal-<?= $row['emergency_id'] ?>')" class="p-2 hover:bg-gray-100 rounded-full text-gray-500 hover:text-gray-800 transition">
+                <i data-lucide="x" class="w-8 h-8"></i>
+            </button>
+        </div>
+
+        <!-- Modal Body (Split Layout) -->
+        <div class="flex-1 overflow-y-auto p-4 lg:p-6 bg-gray-50">
+            
+            <div class="flex flex-col lg:flex-row gap-6 h-full">
+                
+                <!-- LEFT COLUMN: MAP ONLY -->
+                <div class="lg:w-6/12 flex flex-col gap-4">
+                    
+                    <!-- Map Card (Full Height) -->
+                    <div class="flex-1 bg-gray-200 rounded-3xl relative overflow-hidden group min-h-[400px] border-4 border-white shadow-lg shadow-blue-100/50">
+                        <!-- GOOGLE MAP -->
+                        <div id="google-map" class="absolute inset-0 w-full h-full bg-cover bg-center">
+                            <div id="map-view-<?= $row['emergency_id'] ?>" class="w-full h-full bg-gray-300 opacity-50 flex items-center justify-center">
+                            </div>
+                        </div>
+
+                        <!-- Center Pin Overlay -->
+                        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center pointer-events-none z-10 pb-9">
+                            <div class="w-4 h-4 bg-orange-500 rounded-full animate-ping absolute top-[28px]"></div>
+                            <i class="fa-solid fa-location-dot text-6xl text-orange-600 drop-shadow-xl z-10 relative"></i>
+                            <div class="w-3 h-3 bg-black opacity-20 rounded-full absolute bottom-[5px] blur-[2px]"></div>
+                        </div>
+
+                        <!-- Location Address Overlay (Read Only) -->
+                        <div class="absolute top-4 left-4 right-4 z-20 pointer-events-none">
+                            <div class="bg-white/95 backdrop-blur-md p-3 rounded-2xl shadow-lg flex items-center gap-3 border border-white/20 pointer-events-auto max-w-full">
+                                <div class="p-2 bg-orange-100 text-orange-600 rounded-xl">
+                                    <i data-lucide="map-pin" class="w-5 h-5"></i>
+                                </div>
+                                <div class="pr-2 min-w-0 flex-1">
+                                    <p class="text-xs text-gray-500 font-bold uppercase">Incident Location</p>
+                                    <p class="text-sm font-bold text-gray-800 truncate w-full"><?= htmlspecialchars($row['location_address']) ?></p>
+                                </div>
+                                <a href="https://www.google.com/maps/search/?api=1&query=<?= urlencode($row['location_address']) ?>" target="_blank" class="ml-2 bg-blue-50 text-blue-600 p-2 rounded-xl hover:bg-blue-100 transition-colors" title="Open in Maps">
+                                    <i data-lucide="external-link" class="w-4 h-4"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN: Details + Photos + AI -->
+                <div class="lg:w-6/12 flex flex-col gap-4">
+                    <div class="bg-white rounded-3xl p-6 lg:p-8 shadow-xl border border-white flex flex-col h-full overflow-y-auto">
+                        
+                        <!-- Reporter Section -->
+                        <div class="flex items-center gap-4 mb-4 pb-4 border-b border-gray-100">
+                            <?php if ($row['profile_photo']): ?>
+                                <img src="<?= htmlspecialchars($row['profile_photo']) ?>" class="w-14 h-14 rounded-full object-cover shadow-lg">
+                            <?php else: ?>
+                                <div class="w-14 h-14 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 text-xl font-bold border-4 border-white shadow-sm overflow-hidden relative">
+                                    <?= strtoupper(getInitials($row['full_name'])) ?>
+                                </div>
+                            <?php endif; ?>
+                            <div>
+                                <p class="text-xs font-bold text-gray-400 uppercase tracking-wide">Reported By</p>
+                                <h3 class="text-xl font-bold text-gray-900"><?= htmlspecialchars($row['full_name']) ?></h3>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded font-bold flex items-center gap-1">
+                                        <i class="fa-solid fa-phone"></i> <?= htmlspecialchars($row['phone']) ?>
+                                    </span>
+                                    <a href="https://wa.me/<?= str_replace(['-',' '], '', $row['phone']) ?>" target="_blank" class="text-gray-400 hover:text-green-500 transition-colors">
+                                        <i class="fa-brands fa-whatsapp text-lg"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            
+                            <!-- Multi-Photo Evidence Area -->
+                            <div>
+                                <div class="flex items-center justify-between mb-3 px-1">
+                                    <label class="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                                        <i data-lucide="camera" class="w-4 h-4"></i> Evidence Photos
+                                    </label>
+                                    <span class="text-xs font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-md"><?= count($photos) ?> Files</span>
+                                </div>
+                                
+                                <div class="grid grid-cols-4 gap-3 h-28">
+                                    <?php foreach ($photos as $index => $photoUrl): ?>
+                                    <div onclick="updateLightboxAndOpen(<?= $index ?>, <?= $photosJson ?>)" class="relative rounded-xl overflow-hidden cursor-pointer group h-full bg-gray-200">
+                                        <img src="<?= htmlspecialchars($photoUrl) ?>" class="w-full h-full object-cover transition transform group-hover:scale-110">
+                                        <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                            <i data-lucide="maximize-2" class="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity"></i>
+                                        </div>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+
+                            <!-- Description -->
+                            <div>
+                                <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 block">Situation Description</label>
+                                <div class="bg-gray-50 rounded-2xl p-4 text-gray-700 leading-relaxed text-sm border border-gray-100 italic">
+                                    "<?= nl2br(htmlspecialchars($row['description'])) ?>"
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="p-4 border-t border-gray-200 bg-white flex justify-end gap-3 shrink-0">
+            <button onclick="closeEmergencyModal('modal-<?= $row['emergency_id'] ?>')" class="py-3 px-6 rounded-xl text-gray-500 font-bold hover:bg-gray-100 transition">
+                Close
+            </button>
+            
+            <form onsubmit="handleAcceptMission(event, '<?= $row['emergency_id'] ?>')">
+                <button type="submit" class="py-3 px-8 bg-red-600 text-white rounded-xl font-bold hover:bg-red-700 shadow-lg shadow-red-200 flex items-center gap-2 transform active:scale-95 transition-all">
+                    <i data-lucide="ambulance" class="w-5 h-5"></i>
+                    RESPOND TO EMERGENCY
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+<?php endforeach; ?>
+
+<!-- LIGHTBOX MODAL (For Photos) -->
+<div id="lightbox-modal" class="fixed inset-0 z-[60] bg-black/95 hidden flex items-center justify-center opacity-0 transition-opacity duration-300">
+    <!-- Close Button -->
+    <button onclick="closeLightbox()" class="absolute top-6 right-6 text-white/70 hover:text-white transition-colors z-[70]">
+        <i data-lucide="x" class="w-10 h-10"></i>
+    </button>
+
+    <!-- Nav Left -->
+    <button onclick="changePhoto(-1)" class="absolute left-4 lg:left-10 text-white/50 hover:text-white p-4 transition-colors z-[70] hover:bg-white/10 rounded-full">
+        <i data-lucide="chevron-left" class="w-12 h-12"></i>
+    </button>
+
+    <!-- Image Container -->
+    <div class="relative max-w-[90vw] max-h-[85vh]">
+        <img id="lightbox-img" src="" class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl">
+        <div class="absolute bottom-4 left-0 right-0 text-center pointer-events-none">
+            <span id="lightbox-counter" class="bg-black/50 text-white px-3 py-1 rounded-full text-sm font-medium backdrop-blur-sm">1 / 3</span>
+        </div>
+    </div>
+
+    <!-- Nav Right -->
+    <button onclick="changePhoto(1)" class="absolute right-4 lg:right-10 text-white/50 hover:text-white p-4 transition-colors z-[70] hover:bg-white/10 rounded-full">
+        <i data-lucide="chevron-right" class="w-12 h-12"></i>
+    </button>
+</div>

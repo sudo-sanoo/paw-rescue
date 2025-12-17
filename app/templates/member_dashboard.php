@@ -65,6 +65,7 @@ $initials = getInitials($user['full_name']);
     <script defer src="../js/member_templates.js"></script>
     <script defer src="../js/mykad_service.js"></script>
     <script defer src="../js/member_report.js"></script>
+    <script defer src="../js/rescuer_emergencies.js"></script>
     <!-- Cropper.js CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <!-- Cropper.js JS -->
@@ -99,7 +100,7 @@ $initials = getInitials($user['full_name']);
                     <i data-lucide="layout-dashboard" class="w-5 h-5 shrink-0"></i>
                     <span>Home</span>
                 </button>
-                <!-- NO.2 to NO.5 is for 'member' and 'volunteer' (Legacy), displayed as 'volunteer' and 'rescuer' respectively in the system -->
+                <!-- (Legacy), displayed as 'volunteer' and 'rescuer' respectively in the system -->
                 <!-- 2. Report Emergency (Highlighted) -->
                 <?php if ($role_identifier === 'user' || $role_identifier === 'volunteer'): ?>
                 <button onclick="switchTab('report')" id="nav-report" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900 group">
@@ -109,29 +110,43 @@ $initials = getInitials($user['full_name']);
                     <span class="font-semibold text-gray-700 group-hover:text-red-600">Report Emergency</span>
                 </button>
                 <?php endif; ?>
-                <!-- 3. My Reports (Activity) -->
+                <!-- 3. Emergencies Now -->
+                <?php if ($role_identifier === 'volunteer' || $role_identifier === 'veterinarian'): ?>
+                <button onclick="switchTab('rescuer_emergencies')" id="nav-rescuer_emergencies" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900 group">
+                    <div class="relative">
+                        <div class="bg-red-100 text-red-500 p-1.4 rounded-md group-hover:bg-red-500 group-hover:text-white transition-colors">
+                            <i data-lucide="radio" class="w-5 h-5 shrink-0 animate-pulse"></i>
+                        </div>
+                        <span class="absolute -top-1 -right-1 flex h-3 w-3">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                        </span>
+                    </div>
+                    <span>Emergencies Now</span>
+                </button>
+                <?php endif; ?>
+                <!-- 4. My Reports (Activity) -->
                 <?php if ($role_identifier === 'user' || $role_identifier === 'volunteer'): ?>
                 <button onclick="switchTab('activity')" id="nav-activity" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900">
                     <i data-lucide="activity" class="w-5 h-5 shrink-0"></i>
                     <span>My Reports</span>
                 </button>
                 <?php endif; ?>
-                <!-- 4. Adopt -->
+                <!-- 5. Adopt -->
                 <?php if ($role_identifier === 'user' || $role_identifier === 'volunteer'): ?>
                 <button onclick="switchTab('adopt')" id="nav-adopt" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900">
                     <i data-lucide="heart-handshake" class="w-5 h-5 shrink-0"></i>
                     <span>Adopt</span>
                 </button>
                 <?php endif; ?>
-                <!-- 5. Become Volunteer -->
+                <!-- 6. Become Volunteer -->
                 <?php if ($role_identifier === 'user'): ?>
                 <button onclick="switchTab('join')" id="nav-join" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900">
                     <i data-lucide="medal" class="w-5 h-5 shrink-0"></i>
                     <span>Become a Hero</span>
                 </button>
                 <?php endif; ?>
-                <!-- NO.6 is for Veterinarian -->
-                <!-- 6. Veterinarian Treatment Report -->
+                <!-- 7. Veterinarian Treatment Report -->
                 <?php if ($role_identifier === 'veterinarian'): ?>
                 <button onclick="switchTab('vet_treatment_report')" id="nav-vet_treatment_report" class="nav-item w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900">
                     <i data-lucide="square-activity" class="w-5 h-5 shrink-0"></i>
