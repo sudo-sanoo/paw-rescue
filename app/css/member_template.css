@@ -81,3 +81,14 @@ body {
 }
 
 .gmnoprint, .gm-control-active { display: none !important; }
+
+.map-bg {
+    background-color: #f3f4f6;
+    background-image: 
+        /* Horizontal part of the plus */
+        linear-gradient(90deg, transparent 25px, #e5e7eb 25px, #e5e7eb 35px, transparent 35px),
+        /* Vertical part of the plus */
+        linear-gradient(transparent 25px, #e5e7eb 25px, #e5e7eb 35px, transparent 35px);
+    
+    background-size: 60px 60px;
+}

@@ -2,21 +2,75 @@
 <?php
 require_once __DIR__ . '/../../includes/session_check.php';
 require_once __DIR__ . '/../../includes/db.php';
+require_once __DIR__ . '/../../includes/helper_func.php';
 
 requireRole(['user', 'volunteer']);
+
+$current_user_id = $_SESSION['user_id'];
+
+/**
+ * 1. FETCH USER STATISTICS
+ */
+$stats_sql = "SELECT 
+    COUNT(*) as total,
+    SUM(CASE WHEN status = 'treated' THEN 1 ELSE 0 END) as resolved,
+    SUM(CASE WHEN status NOT IN ('treated', 'cancelled') THEN 1 ELSE 0 END) as active
+    FROM emergencies WHERE user_id = ?";
+$stmt = $conn->prepare($stats_sql);
+$stmt->bind_param("s", $current_user_id);
+$stmt->execute();
+$stats = $stmt->get_result()->fetch_assoc();
+
+/**
+ * 2. FETCH LIVE EMERGENCY (Happening Now)
+ */
+$live_sql = "SELECT e.*, 
+                    e.created_at AS emergency_timestamp,
+                    u.full_name as rescuer_name, 
+                    u.phone as rescuer_phone 
+    FROM emergencies e 
+    LEFT JOIN users u ON e.rescuer_transport = u.user_id 
+    WHERE e.user_id = ? AND e.status NOT IN ('treated', 'cancelled') 
+    ORDER BY e.created_at DESC LIMIT 1";
+$stmt = $conn->prepare($live_sql);
+$stmt->bind_param("s", $current_user_id);
+$stmt->execute();
+$liveEmergency = $stmt->get_result()->fetch_assoc();
+
+// Prepare Live Modal Parameters for JS
+$liveParams = "";
+if ($liveEmergency) {
+    $js_id = addslashes($liveEmergency['emergency_id']);
+    $js_urgency = ucfirst($liveEmergency['urgency'] ?? 'Standard');
+    $js_status = $liveEmergency['status'];
+    $js_name = addslashes($liveEmergency['rescuer_name'] ?? 'Assigning...');
+    $js_phone = addslashes($liveEmergency['rescuer_phone'] ?? '---');
+    $js_init = getInitials($liveEmergency['rescuer_name'] ?? 'A');
+
+    $liveParams = "'$js_id', '$js_urgency', '$js_status', '$js_name', '$js_phone', '$js_init'";
+}
+
+// 3. FETCH HISTORY into an array for the foreach loop
+$history = [];
+$hist_sql = "SELECT * FROM emergencies WHERE user_id = ? AND status IN ('treated', 'cancelled') ORDER BY created_at DESC LIMIT 10";
+$stmt = $conn->prepare($hist_sql);
+$stmt->bind_param("s", $current_user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+while ($row = $result->fetch_assoc()) { $history[] = $row; }
 ?>
 
 <!-- VIEW: My Reports (Activity Tracking) -->
 <div id="view-activity" class="animate-fade-in max-w-7xl mx-auto space-y-8">
 
     <!-- USER STATS -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
             <div class="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center">
                 <i class="fas fa-file-alt text-xl"></i>
             </div>
             <div>
-                <h4 class="text-2xl font-bold text-gray-800">12</h4>
+                <h4 class="text-2xl font-bold text-gray-800"><?= $stats['total'] ?></h4>
                 <p class="text-xs text-gray-500 uppercase font-semibold">Total Reports</p>
             </div>
         </div>
@@ -25,30 +79,22 @@ requireRole(['user', 'volunteer']);
                 <i class="fas fa-check-circle text-xl"></i>
             </div>
             <div>
-                <h4 class="text-2xl font-bold text-gray-800">8</h4>
+                <h4 class="text-2xl font-bold text-gray-800"><?= $stats['resolved'] ?? 0 ?></h4>
                 <p class="text-xs text-gray-500 uppercase font-semibold">Resolved</p>
             </div>
         </div>
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4">
-            <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
-                <i class="fas fa-clipboard-list text-xl"></i>
-            </div>
-            <div>
-                <h4 class="text-2xl font-bold text-gray-800">3</h4>
-                <p class="text-xs text-gray-500 uppercase font-semibold">Under Review</p>
-            </div>
-        </div>
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4 border-l-4 border-l-red-500">
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4 border-l-4 border-l-red-500">
             <div class="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center animate-pulse">
                 <i class="fas fa-exclamation text-xl"></i>
             </div>
             <div>
-                <h4 class="text-2xl font-bold text-gray-800">1</h4>
+                <h4 class="text-2xl font-bold text-gray-800"><?= $stats['active'] ?? 0 ?></h4>
                 <p class="text-xs text-red-500 uppercase font-bold">Active Now</p>
             </div>
         </div>
     </div>
 
+    <?php if ($liveEmergency): ?>
     <!-- LIVE EMERGENCY EMPHASIS -->
     <div class="space-y-4">
         <h3 class="text-gray-500 font-bold uppercase tracking-wider text-sm flex items-center gap-2">
@@ -56,34 +102,35 @@ requireRole(['user', 'volunteer']);
             Happening Now
         </h3>
         
-        <div onclick="openLiveEmergencyModal()" class="bg-gradient-to-r from-red-50 to-white rounded-2xl shadow-md border border-red-100 p-6 cursor-pointer hover:shadow-lg transition-all group relative overflow-hidden">
+        <div onclick="openLiveEmergencyModal(<?= $liveParams ?>)" class="bg-gradient-to-r from-red-50 to-white rounded-2xl shadow-md border border-red-100 p-6 cursor-pointer hover:shadow-lg transition-all group relative overflow-hidden">
             <div class="absolute right-0 top-0 h-full w-1/3 bg-map-pattern opacity-10 pointer-events-none"></div>
             
             <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
                 <div class="flex-1">
                     <div class="flex items-center gap-3 mb-4">
-                        <span class="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide animate-pulse shadow-sm">Live Tracking</span>
-                        <span class="text-xs font-mono text-gray-500">ID: EMGC-2023-8821</span>
+                        <span class="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide animate-pulse shadow-sm"><?= strtoupper($liveEmergency['status']) ?></span>
+                        <span class="text-xs font-mono text-gray-500">Emergency ID: <?= $liveEmergency['emergency_id'] ?></span>
                     </div>
                     <div class="mb-4">
                         <p class="text-lg font-medium text-gray-900 leading-relaxed border-l-4 border-red-200 pl-4 py-1">
-                            "Found a dog with a severe limp near the junction. Looks like a broken leg, bleeding slightly. It's scared and hiding under the bus stop bench. Urgently needs help."
+                            "<?= htmlspecialchars($liveEmergency['description']) ?>"
                         </p>
                     </div>
                     <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 text-gray-600 text-sm">
-                        <span class="flex items-center gap-1.5"><i data-lucide="clock" class="w-4 h-4 text-gray-400"></i> 45 mins ago</span>
-                        <span class="flex items-center gap-1.5"><i data-lucide="map-pin" class="w-4 h-4 text-gray-400"></i> Jalan Ampang, Kuala Lumpur</span>
+                        <span class="flex items-center gap-1.5"><i data-lucide="clock" class="w-4 h-4 text-gray-400"></i> <?= time_elapsed_string($liveEmergency['emergency_timestamp']) ?></span>
+                        <span class="flex items-center gap-1.5"><i data-lucide="map-pin" class="w-4 h-4 text-gray-400"></i> <?= htmlspecialchars($liveEmergency['location_address']) ?></span>
                     </div>
                 </div>
                 <div class="flex items-center justify-center md:justify-end">
                     <button class="bg-gray-900 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-gray-300 group-hover:bg-black transition-colors flex items-center gap-2 whitespace-nowrap">
-                        Open Command Center
-                        <i data-lucide="external-link" class="w-4 h-4"></i>
+                        Open Live
+                        <i data-lucide="radio" class="w-4 h-4"></i>
                     </button>
                 </div>
             </div>
         </div>
     </div>
+    <?php endif; ?>
 
     <!-- ENCAPSULATED HISTORY SECTION -->
     <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden flex flex-col max-h-[600px]">
@@ -94,34 +141,47 @@ requireRole(['user', 'volunteer']);
                 <h3 class="text-gray-800 font-bold text-base">Recent Report History</h3>
             </div>
             <div class="flex items-center gap-4">
-                <span class="text-xs text-gray-500 font-medium bg-gray-200/50 px-2 py-1 rounded">Total: 4 Records</span>
+                <span class="text-xs text-gray-500 font-medium bg-gray-200/50 px-2 py-1 rounded">Total: <?= count($history) ?> Records</span>
             </div>
         </div>
 
         <!-- Scrollable Card Container -->
         <div class="overflow-y-auto p-4 md:p-6 space-y-4 custom-scrollbar">
-            
-            <!-- 1. RESOLVED CARD -->
-            <div onclick="openResolvedModal('921', 'Small ginger cat stuck on the high branch near the community park entrance.', 'Oct 24, 2023', 'Bukit Bintang, KL')" class="relative bg-gradient-to-r from-green-50/50 to-white rounded-xl border border-gray-200 p-5 hover:border-green-200 hover:shadow-sm transition-all cursor-pointer group overflow-hidden">
-                <div class="absolute right-0 top-0 h-full w-1/3 bg-map-pattern opacity-5 pointer-events-none"></div>
-                <div class="relative z-10">
-                    <div class="flex items-center gap-3 mb-3">
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-green-100 text-green-700">Resolved</span>
-                        <span class="text-xs font-mono text-gray-400">ID: #921</span>
+            <?php if (empty($history)): ?>
+                <div class="flex flex-col items-center justify-center py-12 text-center">
+                    <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                        <i data-lucide="clipboard-list" class="w-8 h-8 text-gray-300"></i>
                     </div>
-                    <p class="text-sm font-medium text-gray-900 leading-relaxed border-l-4 border-green-300 pl-3 py-1 mb-3">
-                        Small ginger cat stuck on the high branch near the community park entrance.
-                    </p>
-                    <div class="flex items-center gap-4 text-xs text-gray-500">
-                        <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3"></i> Oct 24, 2023</span>
-                        <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i> Bukit Bintang, KL</span>
-                    </div>
+                    <h4 class="text-sm font-bold text-gray-900">No reports found</h4>
+                    <p class="text-xs text-gray-500 mt-1">Your past emergency reports will appear here.</p>
                 </div>
-                <i data-lucide="chevron-right" class="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300 group-hover:text-gray-500 transition-colors"></i>
-            </div>
-            
-            <!-- Empty Spacer for scroll end -->
-            <div class="h-2 shrink-0"></div>
+            <?php else: ?>
+                <?php foreach ($history as $row): 
+                    $js_id = $row['emergency_id'];
+                    $js_desc = addslashes(htmlspecialchars($row['description']));
+                    $js_date = date('M d, Y', strtotime($row['created_at']));
+                    $js_loc = addslashes(htmlspecialchars($row['location_address']));
+                ?>
+                <!-- 1. RESOLVED CARD -->
+                <div onclick="openResolvedModal('<?= $js_id ?>', '<?= $js_desc ?>', '<?= $js_date ?>', '<?= $js_loc ?>')" class="relative bg-gradient-to-r from-green-50/50 to-white rounded-xl border border-gray-200 p-5 hover:border-green-200 hover:shadow-sm transition-all cursor-pointer group overflow-hidden">
+                    <div class="absolute right-0 top-0 h-full w-1/3 bg-map-pattern opacity-5 pointer-events-none"></div>
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-3 mb-3">
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide bg-green-100 text-green-700"><?= $row['status'] ?></span>
+                            <span class="text-xs font-mono text-gray-400">Emergency ID: <?= $row['emergency_id'] ?></span>
+                        </div>
+                        <p class="text-sm font-medium text-gray-900 leading-relaxed border-l-4 border-green-300 pl-3 py-1 mb-3">
+                            <?= htmlspecialchars($row['description']) ?>
+                        </p>
+                        <div class="flex items-center gap-4 text-xs text-gray-500">
+                            <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3"></i> <?= $js_date ?></span>
+                            <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i> <?= htmlspecialchars($row['location_address']) ?></span>
+                        </div>
+                    </div>
+                    <i data-lucide="chevron-right" class="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300 group-hover:text-gray-500 transition-colors"></i>
+                </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -133,8 +193,8 @@ requireRole(['user', 'volunteer']);
             <div class="flex items-center gap-4">
                 <div class="w-3 h-3 rounded-full bg-red-500 animate-pulse ring-2 ring-red-900/50"></div>
                 <div>
-                    <h2 class="font-bold text-xl leading-tight">Live Emergency Command</h2>
-                    <p class="text-xs text-gray-400">Emergency ID: EMGC-2023-8821 • High Priority</p>
+                    <h2 class="font-bold text-xl leading-tight">Live</h2>
+                    <p id="live-meta-text" class="text-xs text-gray-400">Emergency ID: -- • -- Priority</p>
                 </div>
             </div>
             <button onclick="closeLiveEmergencyModal()" class="w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-gray-300 hover:text-white transition-colors">
@@ -147,30 +207,34 @@ requireRole(['user', 'volunteer']);
                 <div class="flex-1">
                     <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-8">Status Timeline</h4>
                     <div class="space-y-8 relative border-l-2 border-gray-100 pl-6 ml-2">
-                        <div class="relative">
+                        <div id="step-submitted" class="relative transition-all duration-500">
                             <div class="absolute -left-[31px] top-1 w-4 h-4 rounded-full bg-blue-500 border-2 border-white ring-1 ring-blue-100"></div>
-                            <p class="text-[10px] text-gray-400">10:00 AM</p>
+                            <p class="status-label text-[10px] font-bold mb-0.5 hidden text-orange-600">Current Status</p>
                             <p class="text-sm font-medium text-gray-600">Report Submitted</p>
                         </div>
-                        <div class="relative">
+                        <div id="step-on_the_way" class="relative transition-all duration-500">
                             <div class="absolute -left-[31px] top-1 w-4 h-4 rounded-full bg-orange-500 border-2 border-white ring-4 ring-orange-100 animate-pulse"></div>
-                            <p class="text-[10px] text-orange-600 font-bold mb-0.5">Current Status</p>
-                            <p class="text-sm font-bold text-gray-900">Rescuer On The Way</p>
+                            <p class="status-label text-[10px] font-bold mb-0.5 hidden text-orange-600">Current Status</p>
+                            <p class="text-sm font-bold text-gray-900" id="live-status-text">Rescuer On The Way</p>
                         </div>
-                        <div class="relative opacity-40">
+                        <div id="step-arrived" class="relative transition-all duration-500">
                             <div class="absolute -left-[31px] top-1 w-4 h-4 rounded-full bg-gray-200 border-2 border-white"></div>
+                            <p class="status-label text-[10px] font-bold mb-0.5 hidden text-orange-600">Current Status</p>
                             <p class="text-sm font-medium text-gray-400">Arrived at Scene</p>
                         </div>
-                        <div class="relative opacity-40">
+                        <div id="step-transporting" class="relative transition-all duration-500">
                             <div class="absolute -left-[31px] top-1 w-4 h-4 rounded-full bg-gray-200 border-2 border-white"></div>
+                            <p class="status-label text-[10px] font-bold mb-0.5 hidden text-orange-600">Current Status</p>
                             <p class="text-sm font-medium text-gray-400">Transporting to Vet</p>
                         </div>
-                        <div class="relative opacity-40">
+                        <div id="step-treating" class="relative transition-all duration-500">
                             <div class="absolute -left-[31px] top-1 w-4 h-4 rounded-full bg-gray-200 border-2 border-white"></div>
+                            <p class="status-label text-[10px] font-bold mb-0.5 hidden text-orange-600">Current Status</p>
                             <p class="text-sm font-medium text-gray-400">Treating</p>
                         </div>
-                        <div class="relative opacity-40">
+                        <div id="step-resolved" class="relative transition-all duration-500">
                             <div class="absolute -left-[31px] top-1 w-4 h-4 rounded-full bg-gray-200 border-2 border-white"></div>
+                            <p class="status-label text-[10px] font-bold mb-0.5 hidden text-orange-600">Current Status</p>
                             <p class="text-sm font-medium text-gray-400">Outcome</p>
                         </div>
                     </div>
@@ -179,16 +243,16 @@ requireRole(['user', 'volunteer']);
                 <div class="mt-6 pt-8 border-t border-gray-100">
                     <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Assigned Rescuer</h4>
                     <div class="flex items-center gap-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                        <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold border-2 border-white shadow-sm text-lg">
-                            S
+                        <div id="live-rescuer-initials" class="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold border-2 border-white shadow-sm text-lg">
+                            ?
                         </div>
                         <div>
-                            <p class="text-base font-bold text-gray-900">Sarah (Vol)</p>
-                            <p class="text-sm text-gray-500 font-mono">+60 12-345 6789</p>
+                            <p id="live-rescuer-name" class="text-base font-bold text-gray-900">---</p>
+                            <p id="live-rescuer-phone" class="text-sm text-gray-500 font-mono">---</p>
                         </div>
-                        <button class="ml-auto w-10 h-10 rounded-full bg-green-500 text-white flex items-center justify-center hover:bg-green-600 shadow-lg shadow-green-200 transition-transform hover:scale-105 active:scale-95">
-                            <i class="fas fa-phone"></i>
-                        </button>
+                        <a id="live-rescuer-whatsapp" href="#" target="_blank" class="text-gray-400 hover:text-green-500 transition-colors">
+                            <i class="fa-brands fa-whatsapp text-lg"></i>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -210,23 +274,6 @@ requireRole(['user', 'volunteer']);
                             <span class="text-sm font-bold">OTW</span>
                         </div>
                     </div>
-                </div>
-
-                <div class="absolute bottom-6 right-6 max-w-sm w-full">
-                        <div class="bg-white/90 backdrop-blur rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
-                        <details class="group">
-                            <summary class="flex items-center gap-2 p-4 text-sm font-bold text-gray-700 cursor-pointer hover:bg-gray-50 select-none">
-                                <i data-lucide="camera" class="w-4 h-4"></i>
-                                Evidence (Sensitive Content)
-                                <i data-lucide="chevron-up" class="w-4 h-4 ml-auto transition-transform group-open:rotate-180"></i>
-                            </summary>
-                            <div class="p-4 pt-0 grid grid-cols-3 gap-3">
-                                <img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200" class="w-full h-20 object-cover rounded-lg sensitive-blur cursor-pointer hover:opacity-100 transition-opacity border border-gray-200">
-                                <img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200" class="w-full h-20 object-cover rounded-lg sensitive-blur cursor-pointer hover:opacity-100 transition-opacity border border-gray-200">
-                                <img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?q=80&w=200" class="w-full h-20 object-cover rounded-lg sensitive-blur cursor-pointer hover:opacity-100 transition-opacity border border-gray-200">
-                            </div>
-                        </details>
-                        </div>
                 </div>
             </div>
         </div>
