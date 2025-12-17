@@ -250,7 +250,7 @@ require_once "includes/db.php";
                             <i class="fa-solid fa-location-dot"></i>
                         </div>
                         <h3 class="text-2xl font-bold mb-3">Geo-Tag Rescue</h3>
-                        <p class="text-gray-400">Spot an injured or missing animal? Snap a photo and drop a pin. Our app alerts nearby volunteers and vets instantly.</p>
+                        <p class="text-gray-400">Spot an injured or missing animal? Snap a photo and drop a pin. Our app alerts nearby rescuers and vets instantly.</p>
                     </div>
 
                     <!-- Feature 2 -->
