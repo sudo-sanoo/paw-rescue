@@ -234,3 +234,86 @@ window.handleAcceptMission = async function(event, emergencyId) {
         submitBtn.classList.add('bg-red-600', 'hover:bg-red-700');
     }
 };
+
+// -- EMERGENCIES FILTERING -- 
+
+document.addEventListener('click', (e) => {
+    // 1. Check if the clicked element (or its parent) is a filter button
+    const btn = e.target.closest('.filter-btn');
+    if (!btn) return;
+
+    // 2. Locate the container (If it's not on screen, stop)
+    const container = document.getElementById('emergencies-list-container');
+    if (!container) return;
+
+    const filterType = btn.getAttribute('data-filter');
+    const noResultsMsg = document.getElementById('no-results-message'); // Optional UI polish
+    
+    // Define weights: Lower = Higher Priority
+    const urgencyWeight = { 'critical': 1, 'serious': 2, 'minor': 3 };
+
+    // --- UI UPDATES ---
+    
+    // Reset all buttons in the same group
+    const allButtons = btn.parentElement.querySelectorAll('.filter-btn');
+    allButtons.forEach(b => {
+        b.style.opacity = '0.6';
+        b.style.transform = 'scale(0.95)';
+    });
+
+    // Highlight active button
+    btn.style.opacity = '1';
+    btn.style.transform = 'scale(1)';
+
+    // --- FILTERING LOGIC ---
+
+    const cards = Array.from(container.querySelectorAll('.emergency-card'));
+    let visibleCount = 0;
+
+    cards.forEach(card => {
+        const urgency = card.getAttribute('data-urgency');
+        
+        // Show if 'all' OR matches specific urgency
+        if (filterType === 'all' || urgency === filterType) {
+            card.classList.remove('hidden');
+            visibleCount++;
+        } else {
+            card.classList.add('hidden');
+        }
+    });
+
+    // Toggle "No Results" message if you added it to PHP
+    if (noResultsMsg) {
+        noResultsMsg.classList.toggle('hidden', visibleCount > 0);
+    }
+
+    // --- SORTING LOGIC ---
+    
+    // Get only the visible cards to sort
+    const visibleCards = cards.filter(c => !c.classList.contains('hidden'));
+
+    visibleCards.sort((a, b) => {
+        const urgencyA = urgencyWeight[a.getAttribute('data-urgency')] || 99;
+        const urgencyB = urgencyWeight[b.getAttribute('data-urgency')] || 99;
+        
+        // Get timestamps (ensure they are integers)
+        const timeA = parseInt(a.getAttribute('data-timestamp')) || 0;
+        const timeB = parseInt(b.getAttribute('data-timestamp')) || 0;
+
+        if (filterType === 'all') {
+            // IF 'All': Primary Sort = Severity (Urgency)
+            if (urgencyA !== urgencyB) {
+                return urgencyA - urgencyB; // ASC (1 comes before 3)
+            }
+            // Secondary Sort = Hours Ago (Newest First)
+            return timeB - timeA; 
+        } else {
+            // IF Specific Filter: Sort ONLY by Hours Ago (Newest First)
+            return timeB - timeA;
+        }
+    });
+
+    // --- RE-RENDER ---
+    // Append sorted cards back to the container
+    visibleCards.forEach(card => container.appendChild(card));
+});

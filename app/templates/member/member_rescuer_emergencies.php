@@ -74,11 +74,19 @@ $urgencyStyles = [
 <div id="view-rescuer_emergency" class="animate-fade-in max-w-5xl mx-auto space-y-6">
     
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
-        <div class="flex flex-wrap gap-2">
-            <button class="px-4 py-1.5 bg-gray-800 text-white text-sm rounded-full font-medium shadow-sm transition hover:bg-gray-700">All (<?= $stats['all'] ?>)</button>
-            <button class="px-4 py-1.5 bg-red-100 text-red-700 text-sm rounded-full font-medium border border-red-200 transition hover:bg-red-200">Critical (<?= $stats['critical'] ?>)</button>
-            <button class="px-4 py-1.5 bg-orange-100 text-orange-700 text-sm rounded-full font-medium border border-orange-200 transition hover:bg-orange-200">Serious (<?= $stats['serious'] ?>)</button>
-            <button class="px-4 py-1.5 bg-blue-100 text-blue-700 text-sm rounded-full font-medium border border-blue-200 transition hover:bg-blue-200">Minor (<?= $stats['minor'] ?>)</button>
+        <div class="flex flex-wrap gap-2" id="emergency-filters">
+            <button data-filter="all" class="filter-btn active px-4 py-1.5 bg-gray-800 text-white text-sm rounded-full font-medium shadow-sm transition hover:bg-gray-700">
+                All (<?= $stats['all'] ?>)
+            </button>
+            <button data-filter="critical" class="filter-btn px-4 py-1.5 bg-red-300 text-red-700 text-sm rounded-full font-medium border border-red-200 transition hover:bg-red-200">
+                Critical (<?= $stats['critical'] ?>)
+            </button>
+            <button data-filter="serious" class="filter-btn px-4 py-1.5 bg-orange-300 text-orange-700 text-sm rounded-full font-medium border border-orange-200 transition hover:bg-orange-200">
+                Serious (<?= $stats['serious'] ?>)
+            </button>
+            <button data-filter="minor" class="filter-btn px-4 py-1.5 bg-blue-300 text-blue-700 text-sm rounded-full font-medium border border-blue-200 transition hover:bg-blue-200">
+                Minor (<?= $stats['minor'] ?>)
+            </button>
         </div>
     </div>
 
@@ -109,8 +117,11 @@ $urgencyStyles = [
                 $photosJson = htmlspecialchars(json_encode($photos), ENT_QUOTES, 'UTF-8');
             ?>
 
-            <div onclick="openDynamicModal('modal-<?= $row['emergency_id'] ?>', <?= $photosJson ?>, <?= $row['latitude'] ?? 0 ?>, <?= $row['longitude'] ?? 0 ?>)" 
-                    class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative transition hover:shadow-md cursor-pointer group">
+            <div 
+                onclick="openDynamicModal('modal-<?= $row['emergency_id'] ?>', <?= $photosJson ?>, <?= $row['latitude'] ?? 0 ?>, <?= $row['longitude'] ?? 0 ?>)" 
+                class="emergency-card bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative transition hover:shadow-md cursor-pointer group"
+                data-urgency="<?= strtolower($row['urgency']) ?>"
+                data-timestamp="<?= strtotime($row['created_at']) ?>">
                 <div class="absolute left-0 top-0 bottom-0 w-2 <?= $style['bg'] ?>"></div>
                 
                 <div class="p-5 pl-7">
