@@ -314,7 +314,6 @@ require_once "includes/db.php";
                                 <div class="mb-4">
                                     <label class="block text-gray-600 text-sm font-bold mb-2">Phone Number</label>
                                     <div class="flex">
-                                        <span class="inline-flex items-center px-3 rounded-l-lg bg-gray-100 text-gray-600 border border-r-0 border-gray-300">+60</span>
                                         <input id="login-phone" name="phone" type="text" class="w-full px-4 py-3 rounded-r-lg bg-gray-50 border border-gray-300 focus:border-brand focus:ring-2 focus:ring-brand-light outline-none transition" placeholder="Phone Number (Malaysia)">
                                     </div>
                                 </div>
@@ -343,7 +342,6 @@ require_once "includes/db.php";
                                 <div class="mb-4">
                                     <label class="block text-gray-600 text-sm font-bold mb-2">Phone Number</label>
                                     <div class="flex">
-                                        <span class="inline-flex items-center px-3 rounded-l-lg bg-gray-100 text-gray-600 border border-r-0 border-gray-300">+60</span>
                                         <input id="register-phone" name="phone" type="text" class="w-full px-4 py-3 rounded-r-lg bg-gray-50 border border-gray-300 focus:border-brand focus:ring-2 focus:ring-brand-light outline-none transition" placeholder="Phone Number (Malaysia)">
                                     </div>
                                 </div>

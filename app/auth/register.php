@@ -4,28 +4,44 @@ session_start();
 require_once __DIR__ . '/../includes/db.php';
 
 function normalizePhoneToPlus60($phone) {
-    // Remove everything except digits and plus
+    // 1. Remove all non-digits except the leading plus
     $p = preg_replace('/[^\d\+]/', '', $phone);
     $digits = ltrim($p, '+');
 
+    // 2. Standardize to raw digits by handling the prefix
     if (strpos($digits, '60') === 0) {
-        return '+' . $digits; // Already in +60 format
-    }
-    
-    if (strpos($digits, '0') === 0) {
-        return '+60' . substr($digits, 1); // Leading 0 -> +60
-    }
-
-    if (preg_match('/^1[0-9]{7,9}$/', $digits)) {
-        return '+60' . $digits; // User types just 123456789
+        $raw = substr($digits, 2);
+    } elseif (strpos($digits, '0') === 0) {
+        $raw = substr($digits, 1);
+    } else {
+        $raw = $digits;
     }
 
-    return null; // Invalid format
+    // 3. Re-prepend +60 and validate the resulting format
+    $final = '+60' . $raw;
+    return isValidMYPhonePlus60($final) ? $final : null;
 }
 
 function isValidMYPhonePlus60($phonePlus) {
+    // Remove the plus to work with digits
     $digits = ltrim($phonePlus, '+');
-    return (bool) preg_match('/^60(1[0-9]{7,9})$/', $digits);
+
+    /**
+     * Regex Breakdown:
+     * ^60 - Starts with country code 60
+     * (
+     *   11\d{8}      | // Mobile: 011 + 8 digits (11 total)
+     *   15\d{8}      | // VoIP: 015 + 8 digits (11 total)
+     *   1[0,2-4,6-9]\d{7} | // Mobile: 010, 012-014, 016-019 + 7 digits (10 total)
+     *   3\d{8}       | // Landline: 03 (Selangor/KL) + 8 digits (10 total)
+     *   [4-7,9]\d{7} | // Landline: 04, 05, 06, 07, 09 + 7 digits (9 total)
+     *   8[2-9]\d{6}  | // Landline: 082-089 (East MY) + 6 digits (9 total)
+     *   81\d{7}        // Fixed Wireless/Others: 081 + 7 digits
+     * )
+     */
+    $pattern = '/^60(11\d{8}|15\d{8}|1[0,2-4,6-9]\d{7}|3\d{8}|[4-7,9]\d{7}|8[2-9]\d{6}|81\d{7})$/';
+
+    return (bool) preg_match($pattern, $digits);
 }
 
 $name = trim($_POST['name'] ?? '');
