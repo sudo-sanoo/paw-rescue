@@ -7,29 +7,49 @@ require_once __DIR__ . '/../../includes/helper_func.php';
 
 requireRole(['volunteer', 'veterinarian']);
 
+$user_id = $_SESSION['user_id'];
 $upload_path = "../../images/uploads";
 
-// 1. Fetch Emergencies (Pending status, sorted by newest)
-// Joining with users table to get reporter details
-$sql = "SELECT 
-            e.*,
-            e.created_at AS emergency_timestamp,
-            u.full_name,
-            u.phone, 
-            u.profile_photo 
-        FROM emergencies e 
-        JOIN users u ON e.user_id = u.user_id 
-        WHERE e.status = 'pending' 
-        ORDER BY 
-            FIELD(e.urgency, 'critical', 'serious', 'minor') ASC, 
-            e.created_at ASC";
+// 1. CHECK FOR ACTIVE MISSION  
+$activeSql = "SELECT 
+                e.*, 
+                u.full_name AS reporter_name, 
+                u.phone AS reporter_phone, 
+                u.profile_photo AS reporter_photo
+              FROM emergencies e
+              JOIN users u ON e.user_id = u.user_id
+              WHERE e.rescuer_transport = ? 
+              AND e.status IN ('otw', 'transporting', 'treating') 
+              LIMIT 1";
 
-$stmt = $conn->prepare($sql);
-$stmt->execute();
-$result = $stmt->get_result();
-$emergencies = $result->fetch_all(MYSQLI_ASSOC);
+$activeStmt = $conn->prepare($activeSql);
+$activeStmt->bind_param("s", $user_id);
+$activeStmt->execute();
+$activeMission = $activeStmt->get_result()->fetch_assoc();
 
-// 2. Calculate Counts
+// 2. FETCH LIST ONLY IF NO ACTIVE MISSION
+$emergencies = [];
+if (!$activeMission) {
+    $sql = "SELECT 
+                e.*,
+                e.created_at AS emergency_timestamp,
+                u.full_name,
+                u.phone, 
+                u.profile_photo 
+            FROM emergencies e 
+            JOIN users u ON e.user_id = u.user_id 
+            WHERE e.status = 'pending' 
+            ORDER BY 
+                FIELD(e.urgency, 'critical', 'serious', 'minor') ASC, 
+                e.created_at ASC";
+
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $emergencies = $result->fetch_all(MYSQLI_ASSOC);
+}
+
+// 3. Calculate Counts
 $stats = [
     'all' => count($emergencies),
     'critical' => 0,
@@ -43,7 +63,7 @@ foreach ($emergencies as $e) {
     }
 }
 
-// 3. Styling Maps
+// 4. Styling Maps
 $urgencyStyles = [
     'critical' => [
         'bg' => 'bg-red-600', 
@@ -73,111 +93,149 @@ $urgencyStyles = [
 <!-- VIEW: Rescuer Emergencies -->
 <div id="view-rescuer_emergency" class="animate-fade-in max-w-5xl mx-auto space-y-6">
     
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
-        <div class="flex flex-wrap gap-2" id="emergency-filters">
-            <button data-filter="all" class="filter-btn active px-4 py-1.5 bg-gray-800 text-white text-sm rounded-full font-medium shadow-sm transition hover:bg-gray-700">
-                All (<?= $stats['all'] ?>)
-            </button>
-            <button data-filter="critical" class="filter-btn px-4 py-1.5 bg-red-300 text-red-700 text-sm rounded-full font-medium border border-red-200 transition hover:bg-red-200">
-                Critical (<?= $stats['critical'] ?>)
-            </button>
-            <button data-filter="serious" class="filter-btn px-4 py-1.5 bg-orange-300 text-orange-700 text-sm rounded-full font-medium border border-orange-200 transition hover:bg-orange-200">
-                Serious (<?= $stats['serious'] ?>)
-            </button>
-            <button data-filter="minor" class="filter-btn px-4 py-1.5 bg-blue-300 text-blue-700 text-sm rounded-full font-medium border border-blue-200 transition hover:bg-blue-200">
-                Minor (<?= $stats['minor'] ?>)
-            </button>
-        </div>
-    </div>
-
-    <div id="emergencies-list-container" class="space-y-4">
-
-        <?php if (empty($emergencies)): ?>
-            <div class="text-center py-12 text-gray-500 bg-white rounded-xl border border-gray-200">
-                <i data-lucide="check-circle" class="w-12 h-12 mx-auto mb-3 text-green-500"></i>
-                <p>No pending emergencies at the moment.</p>
-            </div>
-        <?php else: ?>
-            
-            <?php foreach ($emergencies as $row): 
-                $style = $urgencyStyles[$row['urgency']] ?? $urgencyStyles['minor'];
-                $timeAgo = time_elapsed_string($row['emergency_timestamp']);
-
-                $row['photo_url'] = $row['profile_photo'] 
-                    ? "$upload_path/avatars/{$row['profile_photo']}"
-                    : "https://ui-avatars.com/api/?name=" . urlencode($row['full_name']);
-
-                $evidenceBase = "$upload_path/emergencies/" . $row['emergency_id'] . "/";
-                
-                $photos = [];
-                if ($row['photo_evidence_1']) $photos[] = $evidenceBase . basename($row['photo_evidence_1']);
-                if ($row['photo_evidence_2']) $photos[] = $evidenceBase . basename($row['photo_evidence_2']);
-                if ($row['photo_evidence_3']) $photos[] = $evidenceBase . basename($row['photo_evidence_3']);
-                
-                $photosJson = htmlspecialchars(json_encode($photos), ENT_QUOTES, 'UTF-8');
-            ?>
-
-            <div 
-                onclick="openDynamicModal('modal-<?= $row['emergency_id'] ?>', <?= $photosJson ?>, <?= $row['latitude'] ?? 0 ?>, <?= $row['longitude'] ?? 0 ?>)" 
-                class="emergency-card bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative transition hover:shadow-md cursor-pointer group"
-                data-urgency="<?= strtolower($row['urgency']) ?>"
-                data-timestamp="<?= strtotime($row['created_at']) ?>">
-                <div class="absolute left-0 top-0 bottom-0 w-2 <?= $style['bg'] ?>"></div>
-                
-                <div class="p-5 pl-7">
-                    <div class="flex justify-between items-start">
+    <?php if ($activeMission): ?>
+    <!-- ACTIVE MISSION PAGE -->
+        <div id="active-mission-container" class="space-y-6">
+            <div class="bg-white rounded-2xl shadow-xl border border-orange-100 overflow-hidden">
+                <div class="bg-orange-600 px-6 py-4 flex justify-between items-center text-white">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-white/20 rounded-lg animate-pulse">
+                            <i data-lucide="ambulance" class="w-6 h-6"></i>
+                        </div>
                         <div>
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="text-xs font-mono text-gray-400">#<?= htmlspecialchars($row['emergency_id']) ?></span>
-                                <span class="pulse-red inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold <?= $style['bg'] ?> text-white">
-                                    <i data-lucide="<?= $style['icon'] ?>" class="w-3 h-3"></i> <?= strtoupper($row['urgency']) ?>
-                                </span>
-                            </div>
-                            <h3 class="text-lg font-bold text-gray-900 flex items-center flex-wrap gap-2">
-                                <?= htmlspecialchars($row['full_name']) ?>
-                                <span class="text-sm font-normal text-gray-500 flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded-md">
-                                    <i class="fa-solid fa-phone text-xs"></i> <?= htmlspecialchars($row['phone']) ?>
-                                </span>
-                            </h3>
-                        </div>
-                        <div class="text-right shrink-0">
-                            <div class="text-2xl font-bold <?= str_replace('bg-', 'text-', $style['bg']) ?>"><?= strtoupper($timeAgo) ?></div>
-                            <div class="text-xs text-gray-500 uppercase tracking-wide">Ago</div>
+                            <h2 class="font-bold text-lg leading-tight">Active Rescue Mission</h2>
+                            <p class="text-xs text-orange-100 uppercase tracking-widest">ID: #<?= $activeMission['emergency_id'] ?></p>
                         </div>
                     </div>
-
-                    <p class="mt-3 text-gray-700 leading-relaxed">
-                        "<?= htmlspecialchars($row['description']) ?>"
-                    </p>
-
-                    <div class="mt-4 flex gap-3">
-
-                        <?php foreach ($photos as $photo): ?>
-                            <div class="relative rounded-lg bg-gray-200 overflow-hidden cursor-pointer group w-24 h-24 shrink-0">
-                                <img src="<?= htmlspecialchars($photo) ?>" class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
-                            </div>
-                        <?php endforeach; ?>
-                        <?php if (empty($photos)): ?>
-                            <div class="h-24 flex items-center text-gray-400 text-xs italic">No photos provided</div>
-                        <?php endif; ?>
-
+                    <div class="text-right">
+                        <span class="px-3 py-1 bg-white text-orange-600 rounded-full text-xs font-black uppercase">
+                            STATUS: <?= $activeMission['status'] ?>
+                        </span>
                     </div>
+                </div>
 
-                    <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-sm">
-                        <div class="flex items-center gap-2 text-gray-600">
-                            <i data-lucide="map-pin" class="w-4 h-4 text-red-500"></i>
-                            <span class="truncate max-w-md"><?= htmlspecialchars($row['location_address']) ?></span>
-                        </div>
-                        <div class="flex items-center gap-1 text-blue-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                            <span>View Details</span>
-                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                        </div>
+                <div class="p-8">
+                    <div class="text-center py-10 border-2 border-dashed border-gray-200 rounded-3xl">
+                        <i data-lucide="map-pin" class="w-12 h-12 text-gray-300 mx-auto mb-4"></i>
+                        <h3 class="text-xl font-bold text-gray-800">Mission Progress Controls</h3>
+                        <p class="text-gray-500 mt-2 max-w-sm mx-auto">
+                            The status update buttons (Arrived, Transporting, Treatment) will appear here.
+                        </p>
+                        
+                        <div class="mt-8 flex flex-wrap justify-center gap-4">
+                             </div>
                     </div>
                 </div>
             </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
-    </div>
+        </div>
+
+    <?php else: ?>
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">
+            <div class="flex flex-wrap gap-2" id="emergency-filters">
+                <button data-filter="all" class="filter-btn active px-4 py-1.5 bg-gray-800 text-white text-sm rounded-full font-medium shadow-sm transition hover:bg-gray-700">
+                    All (<?= $stats['all'] ?>)
+                </button>
+                <button data-filter="critical" class="filter-btn px-4 py-1.5 bg-red-300 text-red-700 text-sm rounded-full font-medium border border-red-200 transition hover:bg-red-200">
+                    Critical (<?= $stats['critical'] ?>)
+                </button>
+                <button data-filter="serious" class="filter-btn px-4 py-1.5 bg-orange-300 text-orange-700 text-sm rounded-full font-medium border border-orange-200 transition hover:bg-orange-200">
+                    Serious (<?= $stats['serious'] ?>)
+                </button>
+                <button data-filter="minor" class="filter-btn px-4 py-1.5 bg-blue-300 text-blue-700 text-sm rounded-full font-medium border border-blue-200 transition hover:bg-blue-200">
+                    Minor (<?= $stats['minor'] ?>)
+                </button>
+            </div>
+        </div>
+
+        <div id="emergencies-list-container" class="space-y-4">
+
+            <?php if (empty($emergencies)): ?>
+                <div class="text-center py-12 text-gray-500 bg-white rounded-xl border border-gray-200">
+                    <i data-lucide="check-circle" class="w-12 h-12 mx-auto mb-3 text-green-500"></i>
+                    <p>No pending emergencies at the moment.</p>
+                </div>
+            <?php else: ?>
+                
+                <?php foreach ($emergencies as $row): 
+                    $style = $urgencyStyles[$row['urgency']] ?? $urgencyStyles['minor'];
+                    $timeAgo = time_elapsed_string($row['emergency_timestamp']);
+
+                    $row['photo_url'] = $row['profile_photo'] 
+                        ? "$upload_path/avatars/{$row['profile_photo']}"
+                        : "https://ui-avatars.com/api/?name=" . urlencode($row['full_name']);
+
+                    $evidenceBase = "$upload_path/emergencies/" . $row['emergency_id'] . "/";
+                    
+                    $photos = [];
+                    if ($row['photo_evidence_1']) $photos[] = $evidenceBase . basename($row['photo_evidence_1']);
+                    if ($row['photo_evidence_2']) $photos[] = $evidenceBase . basename($row['photo_evidence_2']);
+                    if ($row['photo_evidence_3']) $photos[] = $evidenceBase . basename($row['photo_evidence_3']);
+                    
+                    $photosJson = htmlspecialchars(json_encode($photos), ENT_QUOTES, 'UTF-8');
+                ?>
+
+                <div 
+                    onclick="openDynamicModal('modal-<?= $row['emergency_id'] ?>', <?= $photosJson ?>, <?= $row['latitude'] ?? 0 ?>, <?= $row['longitude'] ?? 0 ?>)" 
+                    class="emergency-card bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden relative transition hover:shadow-md cursor-pointer group"
+                    data-urgency="<?= strtolower($row['urgency']) ?>"
+                    data-timestamp="<?= strtotime($row['created_at']) ?>">
+                    <div class="absolute left-0 top-0 bottom-0 w-2 <?= $style['bg'] ?>"></div>
+                    
+                    <div class="p-5 pl-7">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="text-xs font-mono text-gray-400">#<?= htmlspecialchars($row['emergency_id']) ?></span>
+                                    <span class="pulse-red inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold <?= $style['bg'] ?> text-white">
+                                        <i data-lucide="<?= $style['icon'] ?>" class="w-3 h-3"></i> <?= strtoupper($row['urgency']) ?>
+                                    </span>
+                                </div>
+                                <h3 class="text-lg font-bold text-gray-900 flex items-center flex-wrap gap-2">
+                                    <?= htmlspecialchars($row['full_name']) ?>
+                                    <span class="text-sm font-normal text-gray-500 flex items-center gap-1 bg-gray-100 px-2 py-0.5 rounded-md">
+                                        <i class="fa-solid fa-phone text-xs"></i> <?= htmlspecialchars($row['phone']) ?>
+                                    </span>
+                                </h3>
+                            </div>
+                            <div class="text-right shrink-0">
+                                <div class="text-2xl font-bold <?= str_replace('bg-', 'text-', $style['bg']) ?>"><?= strtoupper($timeAgo) ?></div>
+                                <div class="text-xs text-gray-500 uppercase tracking-wide">Ago</div>
+                            </div>
+                        </div>
+
+                        <p class="mt-3 text-gray-700 leading-relaxed">
+                            "<?= htmlspecialchars($row['description']) ?>"
+                        </p>
+
+                        <div class="mt-4 flex gap-3">
+
+                            <?php foreach ($photos as $photo): ?>
+                                <div class="relative rounded-lg bg-gray-200 overflow-hidden cursor-pointer group w-24 h-24 shrink-0">
+                                    <img src="<?= htmlspecialchars($photo) ?>" class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
+                                </div>
+                            <?php endforeach; ?>
+                            <?php if (empty($photos)): ?>
+                                <div class="h-24 flex items-center text-gray-400 text-xs italic">No photos provided</div>
+                            <?php endif; ?>
+
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-sm">
+                            <div class="flex items-center gap-2 text-gray-600">
+                                <i data-lucide="map-pin" class="w-4 h-4 text-red-500"></i>
+                                <span class="truncate max-w-md"><?= htmlspecialchars($row['location_address']) ?></span>
+                            </div>
+                            <div class="flex items-center gap-1 text-blue-600 font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span>View Details</span>
+                                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </div>
+    <?php endif; ?>
 </div>
 
 <?php foreach ($emergencies as $row): 
