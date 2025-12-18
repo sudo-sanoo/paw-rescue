@@ -11,7 +11,6 @@ function openLiveEmergencyModal(id, urgency, status, rescuerName, rescuerPhone, 
     };
 
     safeSetText('live-meta-text', `Emergency ID: ${id} • ${urgency} Priority`);
-    safeSetText('live-status-text', status.replace('_', ' ').toUpperCase());
     safeSetText('live-rescuer-name', rescuerName || 'Assigning...');
     safeSetText('live-rescuer-phone', rescuerPhone || '---');
     safeSetText('live-rescuer-initials', initials || '?');
@@ -52,7 +51,9 @@ function openLiveEmergencyModal(id, urgency, status, rescuerName, rescuerPhone, 
  * Based on DB ENUM: pending, otw, transporting, treating, treated
  */
 function updateTimelineUI(dbStatus) {
-    // 1. Map exact Database ENUM values to your HTML Step IDs
+    const status = dbStatus.toLowerCase();
+    
+    // 1. Map for Timeline Steps
     const statusMap = {
         'pending': 'submitted',
         'otw': 'on_the_way',
@@ -61,46 +62,93 @@ function updateTimelineUI(dbStatus) {
         'treated': 'resolved'
     };
 
-    // 2. Normalize the status to a valid HTML step ID
-    const currentStepId = statusMap[dbStatus.toLowerCase()] || 'submitted';
-    
-    // The sequence must match your HTML IDs exactly
+    const currentStepId = statusMap[status] || 'submitted';
     const steps = ['submitted', 'on_the_way', 'arrived', 'transporting', 'treating', 'resolved'];
     const currentIdx = steps.indexOf(currentStepId);
 
+    // 2. MAP ELEMENTS (Radar & Labels)
+    const emergencyRadar = document.getElementById('emergency-radar');
+    const emergencyLabel = document.getElementById('emergency-label');
+    const rescuerMarker = document.getElementById('rescuer-marker');
+
+    // Reset Map to default state first
+    if (emergencyRadar) emergencyRadar.classList.add('animate-ping', 'bg-red-500/10');
+    if (emergencyLabel) emergencyLabel.innerText = "Emergency Location";
+
+    if (rescuerMarker) {
+        const markerText = rescuerMarker.querySelector('span');
+        const markerIcon = rescuerMarker.querySelector('i');
+        const markerContainer = rescuerMarker.querySelector('div');
+
+        switch(status) {
+            case 'pending':
+                rescuerMarker.style.opacity = '0';
+                break;
+            case 'otw':
+                rescuerMarker.style.opacity = '1';
+                rescuerMarker.style.top = '20%'; 
+                rescuerMarker.style.left = '15%';
+                markerText.innerText = "RESCUER"; // Simple identifier
+                break;
+            case 'transporting':
+                rescuerMarker.style.top = '45%'; 
+                rescuerMarker.style.left = '40%';
+                markerText.innerText = "TRANSPORTING";
+                markerIcon.className = "fas fa-truck-medical animate-bounce";
+                markerContainer.classList.replace('bg-blue-600', 'bg-orange-500');
+                break;
+            case 'treating':
+                // CHANGE 1: Move to Vet Location
+                rescuerMarker.style.top = '35%'; 
+                rescuerMarker.style.left = '25%';
+                markerText.innerText = "AT VET";
+                
+                // CHANGE 2: Update Emergency Point to Vet Name & Stop Radar
+                if (emergencyLabel) emergencyLabel.innerText = "Paws & Claws Vet Clinic";
+                if (emergencyRadar) emergencyRadar.classList.add('opacity-0');
+                
+                markerContainer.className = "bg-purple-600 text-white p-2.5 rounded-xl shadow-xl border-2 border-white flex items-center gap-2";
+                break;
+            case 'treated':
+                rescuerMarker.style.top = '40%';
+                rescuerMarker.style.left = '50%';
+                markerText.innerText = "RESOLVED";
+                
+                // CHANGE 3: Stay at Vet Name & Stop Radar
+                if (emergencyLabel) emergencyLabel.innerText = "Paws & Claws Vet Clinic";
+                if (emergencyRadar) emergencyRadar.classList.add('opacity-0');
+                
+                markerContainer.className = "bg-green-600 text-white p-2.5 rounded-xl shadow-xl border-2 border-white flex items-center gap-2 scale-110";
+                break;
+        }
+    }
+
+    // 3. Update Timeline CSS (Fixed text issue)
     steps.forEach((stepId, index) => {
         const container = document.getElementById(`step-${stepId}`);
         if (!container) return;
 
-        // Target the dot (the first div inside the step container)
         const dot = container.querySelector('div:first-child');
-        const label = container.querySelector('.status-label');
-        const text = container.querySelector('p:last-child');
+        const textElement = container.querySelector('p:last-child'); // The label like "Rescuer On The Way"
 
-        // Reset all states
+        // Reset
         container.classList.remove('opacity-40');
         dot.className = "absolute -left-[31px] top-1 w-4 h-4 rounded-full border-2 border-white transition-all";
-        if (label) label.classList.add('hidden');
-        if (text) text.className = "text-sm font-medium text-gray-400";
 
         if (index < currentIdx) {
-            // STATE: COMPLETED (Blue)
-            dot.classList.add('bg-blue-500', 'ring-1', 'ring-blue-100');
-            if (text) {
-                text.classList.remove('text-gray-400');
-                text.classList.add('text-gray-600');
-            }
+            // Completed Steps (Blue)
+            dot.classList.add('bg-blue-500');
+            textElement.className = "text-sm font-medium text-gray-600";
         } else if (index === currentIdx) {
-            // STATE: ACTIVE (Orange & Pulsing)
+            // Active Step (Orange Pulse)
             dot.classList.add('bg-orange-500', 'animate-pulse', 'ring-4', 'ring-orange-100');
-            if (label) label.classList.remove('hidden');
-            if (text) {
-                text.className = "text-sm font-bold text-gray-900";
-            }
+            textElement.className = "text-sm font-bold text-gray-900"; 
+            // We NO LONGER change the innerText here, so "Rescuer On The Way" stays put.
         } else {
-            // STATE: PENDING (Gray & Faded)
+            // Future Steps (Gray)
             container.classList.add('opacity-40');
             dot.classList.add('bg-gray-200');
+            textElement.className = "text-sm font-medium text-gray-400";
         }
     });
 }

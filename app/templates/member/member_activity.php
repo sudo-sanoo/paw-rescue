@@ -30,7 +30,11 @@ $live_sql = "SELECT e.*,
                     u.phone as rescuer_phone 
     FROM emergencies e 
     LEFT JOIN users u ON e.rescuer_transport = u.user_id 
-    WHERE e.user_id = ? AND e.status NOT IN ('treated', 'cancelled') 
+    WHERE e.user_id = ? 
+        AND (
+            e.status NOT IN ('treated', 'cancelled') 
+            OR (e.status = 'treated' AND e.updated_at >= NOW() - INTERVAL 1 HOUR)
+        )
     ORDER BY e.created_at DESC LIMIT 1";
 $stmt = $conn->prepare($live_sql);
 $stmt->bind_param("s", $current_user_id);
@@ -215,7 +219,7 @@ while ($row = $result->fetch_assoc()) { $history[] = $row; }
                         <div id="step-on_the_way" class="relative transition-all duration-500">
                             <div class="absolute -left-[31px] top-1 w-4 h-4 rounded-full bg-orange-500 border-2 border-white ring-4 ring-orange-100 animate-pulse"></div>
                             <p class="status-label text-[10px] font-bold mb-0.5 hidden text-orange-600">Current Status</p>
-                            <p class="text-sm font-bold text-gray-900" id="live-status-text">Rescuer On The Way</p>
+                            <p class="text-sm font-bold text-gray-900">Rescuer On The Way</p>
                         </div>
                         <div id="step-arrived" class="relative transition-all duration-500">
                             <div class="absolute -left-[31px] top-1 w-4 h-4 rounded-full bg-gray-200 border-2 border-white"></div>
@@ -260,11 +264,11 @@ while ($row = $result->fetch_assoc()) { $history[] = $row; }
             <div class="col-span-2 relative map-bg">
                 <div class="absolute inset-0 flex items-center justify-center">
                     <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                        <div class="w-48 h-48 rounded-full bg-red-500/10 animate-ping absolute -top-20 -left-20 pointer-events-none"></div>
+                        <div id="emergency-radar" class="w-48 h-48 rounded-full bg-red-500/10 animate-ping absolute -top-20 -left-20 pointer-events-none"></div>
                         <div class="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center shadow-xl border-4 border-white relative z-10 text-lg">
                             <i class="fas fa-map-marker-alt"></i>
                         </div>
-                        <div class="bg-white px-3 py-1.5 rounded-lg shadow-md text-xs font-bold whitespace-nowrap absolute top-14 left-1/2 -translate-x-1/2 border border-gray-100">
+                        <div id="emergency-label" class="bg-white px-3 py-1.5 rounded-lg shadow-md text-xs font-bold whitespace-nowrap absolute top-14 left-1/2 -translate-x-1/2 border border-gray-100">
                             Emergency Location
                         </div>
                     </div>
