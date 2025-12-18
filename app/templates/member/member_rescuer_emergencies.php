@@ -88,27 +88,11 @@ $urgencyStyles = [
     ]
 ];
 
-// 1. Get Data & Parse JSON
-$aiStatus = $activeMission['ai_status']; 
-$aiScore = $activeMission['ai_severity_score'];
+$aiStatus = null;
+$aiScore = null;
 
-// Attempt to decode the JSON we stored in the DB
-$aiData = json_decode($activeMission['ai_insight'], true);
-// Check if it's valid structured data
-$isStructured = json_last_error() === JSON_ERROR_NONE && is_array($aiData);
-
-// 2. Dynamic Colors based on Score
-$scoreColor = 'text-green-600 bg-green-50 border-green-200';
-$progressColor = 'bg-green-500';
-
-if($aiScore > 50) { 
-    $scoreColor = 'text-orange-600 bg-orange-50 border-orange-200'; 
-    $progressColor = 'bg-orange-500'; 
-}
-if($aiScore > 80) { 
-    $scoreColor = 'text-red-600 bg-red-50 border-red-200'; 
-    $progressColor = 'bg-red-500'; 
-}
+$aiData = [];
+$isStructured = false;
 
 ?>
 
@@ -123,6 +107,23 @@ if($aiScore > 80) {
             : "https://ui-avatars.com/api/?name=" . urlencode($activeMission['reporter_name']);
 
         $status = $activeMission['status'];
+        $aiStatus = $activeMission['ai_status'];
+        $aiScore = $activeMission['ai_severity_score'];
+        $aiData = json_decode($activeMission['ai_insight'], true);
+        $isStructured = json_last_error() === JSON_ERROR_NONE && is_array($aiData);
+
+        // 2. Dynamic Colors based on Score
+        $scoreColor = 'text-green-600 bg-green-50 border-green-200';
+        $progressColor = 'bg-green-500';
+
+        if($aiScore > 50) { 
+            $scoreColor = 'text-orange-600 bg-orange-50 border-orange-200'; 
+            $progressColor = 'bg-orange-500'; 
+        }
+        if($aiScore > 80) { 
+            $scoreColor = 'text-red-600 bg-red-50 border-red-200'; 
+            $progressColor = 'bg-red-500'; 
+        }
         
         // Default State (OTW)
         $ui = [
