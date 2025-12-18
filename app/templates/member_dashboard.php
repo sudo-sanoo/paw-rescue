@@ -67,6 +67,7 @@ $initials = getInitials($user['full_name']);
     <script defer src="../js/member_report.js"></script>
     <script defer src="../js/member_activity.js"></script>
     <script defer src="../js/rescuer_emergencies.js"></script>
+    <script defer src="../js/vet_treatment.js"></script>
     <!-- Cropper.js CSS -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
     <!-- Cropper.js JS -->
