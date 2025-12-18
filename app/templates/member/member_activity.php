@@ -51,7 +51,10 @@ if ($liveEmergency) {
     $js_phone = addslashes($liveEmergency['rescuer_phone'] ?? '---');
     $js_init = getInitials($liveEmergency['rescuer_name'] ?? 'A');
 
-    $liveParams = "'$js_id', '$js_urgency', '$js_status', '$js_name', '$js_phone', '$js_init'";
+    $js_lat = !empty($liveEmergency['latitude']) ? $liveEmergency['latitude'] : 'null';
+    $js_lng = !empty($liveEmergency['longitude']) ? $liveEmergency['longitude'] : 'null';
+
+    $liveParams = "'$js_id', '$js_urgency', '$js_status', '$js_name', '$js_phone', '$js_init', $js_lat, $js_lng";
 }
 
 // 3. FETCH HISTORY into an array for the foreach loop
@@ -261,22 +264,10 @@ while ($row = $result->fetch_assoc()) { $history[] = $row; }
                 </div>
             </div>
 
-            <div class="col-span-2 relative map-bg">
-                <div class="absolute inset-0 flex items-center justify-center">
-                    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                        <div id="emergency-radar" class="w-48 h-48 rounded-full bg-red-500/10 animate-ping absolute -top-20 -left-20 pointer-events-none"></div>
-                        <div class="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center shadow-xl border-4 border-white relative z-10 text-lg">
-                            <i class="fas fa-map-marker-alt"></i>
-                        </div>
-                        <div id="emergency-label" class="bg-white px-3 py-1.5 rounded-lg shadow-md text-xs font-bold whitespace-nowrap absolute top-14 left-1/2 -translate-x-1/2 border border-gray-100">
-                            Emergency Location
-                        </div>
-                    </div>
-                    <div class="absolute top-1/3 left-1/4 transition-all duration-[5000ms]" id="rescuer-marker">
-                        <div class="bg-blue-600 text-white p-2.5 rounded-xl shadow-xl border-2 border-white flex items-center gap-2 transform -rotate-12">
-                            <i class="fas fa-ambulance text-lg"></i>
-                            <span class="text-sm font-bold">OTW</span>
-                        </div>
+            <div class="col-span-2 relative">
+                <div id="activity-live-map" class="h-full w-full bg-gray-200 rounded-xl mb-6 relative overflow-hidden shadow-inner">
+                    <div class="absolute inset-0 flex items-center justify-center text-gray-400 text-sm">
+                        <i class="fa-solid fa-map-location-dot mr-2"></i> Loading Map...
                     </div>
                 </div>
             </div>

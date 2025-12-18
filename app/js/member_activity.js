@@ -1,6 +1,141 @@
-/** * LIVE EMERGENCY MODAL LOGIC - Photos Removed
+// --- MAP STATE VARIABLES ---
+let activityMap;
+let activityDirectionsService;
+let activityDirectionsRenderer;
+let getRescuerMarker;
+let emergencyMarker;
+let pollInterval;
+
+// --- GOOGLE MAPS DYNAMIC LOADER (Reusable Pattern) ---
+function loadActivityMap(emergencyId, destLat, destLng) {
+    if (typeof google !== 'undefined' && typeof google.maps !== 'undefined') {
+        initActivityMap(emergencyId, destLat, destLng);
+    } else {
+        // If map script isn't loaded yet, load it now
+        if (typeof GOOGLE_MAPS_KEY === 'undefined') {
+            console.error("GOOGLE_MAPS_KEY missing");
+            return;
+        }
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_KEY}&libraries=places,marker&callback=onMapsApiLoaded`;
+        script.async = true;
+        script.defer = true;
+        document.body.appendChild(script);
+
+        // Global callback for when the script finishes
+        window.onMapsApiLoaded = () => {
+            initActivityMap(emergencyId, destLat, destLng);
+        };
+    }
+}
+
+// --- MAIN MAP LOGIC ---
+async function initActivityMap(emergencyId, destLat, destLng) {
+    const mapEl = document.getElementById('activity-live-map');
+    if (!mapEl || !destLat || !destLng) return;
+
+    const destination = { lat: parseFloat(destLat), lng: parseFloat(destLng) };
+
+    // 1. Initialize Map
+    const { Map } = await google.maps.importLibrary("maps");
+    activityMap = new Map(mapEl, {
+        zoom: 13,
+        center: destination,
+        disableDefaultUI: true, // Keep it clean for the modal
+        zoomControl: true,      // Allow user to zoom
+        mapId: "ACTIVITY_MAP_ID"
+    });
+
+    // 2. Add Emergency Marker (Red)
+    emergencyMarker = new google.maps.Marker({
+        position: destination,
+        map: activityMap,
+        title: "Emergency Scene",
+        icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 8,
+            fillColor: "#DC2626", // Red
+            fillOpacity: 1,
+            strokeWeight: 2,
+            strokeColor: "white",
+        }
+    });
+
+    // 3. Setup Directions (Routing)
+    activityDirectionsService = new google.maps.DirectionsService();
+    activityDirectionsRenderer = new google.maps.DirectionsRenderer({
+        map: activityMap,
+        suppressMarkers: true,
+        polylineOptions: { strokeColor: "#2563EB", strokeWeight: 4 } // Blue line
+    });
+
+    // 4. Start Polling for Rescuer Location
+    startPollingRescuer(emergencyId, destination);
+}
+
+function startPollingRescuer(emergencyId, destination) {
+    // Run immediately once
+    fetchRescuerLocation(emergencyId, destination);
+
+    // Then run every 10 seconds
+    if (pollInterval) clearInterval(pollInterval);
+    pollInterval = setInterval(() => {
+        fetchRescuerLocation(emergencyId, destination);
+    }, 10000);
+}
+
+async function fetchRescuerLocation(emergencyId, destination) {
+    try {
+        const response = await fetch(`../api/get_rescuer_location.php?emergency_id=${emergencyId}`);
+        const data = await response.json();
+
+        if (data.success) {
+            const rescuerPos = { lat: data.lat, lng: data.lng };
+            updateRescuerOnMap(rescuerPos, destination);
+        } else {
+            console.log("Rescuer location not yet available.");
+        }
+    } catch (err) {
+        console.error("Polling Error:", err);
+    }
+}
+
+function updateRescuerOnMap(rescuerPos, destination) {
+    // 1. Add/Move Rescuer Marker
+    if (!getRescuerMarker) {
+        getRescuerMarker = new google.maps.Marker({
+            position: rescuerPos,
+            map: activityMap,
+            title: "Rescuer",
+            icon: {
+                path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                scale: 5,
+                fillColor: "#ea580c", // Orange (distinct from route)
+                fillOpacity: 1,
+                strokeWeight: 2,
+                strokeColor: "white",
+            }
+        });
+    } else {
+        getRescuerMarker.setPosition(rescuerPos);
+    }
+
+    // 2. Draw Route (Rescuer -> Emergency)
+    activityDirectionsService.route({
+        origin: rescuerPos,
+        destination: destination,
+        travelMode: google.maps.TravelMode.DRIVING
+    }, (response, status) => {
+        if (status === "OK") {
+            activityDirectionsRenderer.setDirections(response);
+        }
+    });
+}
+
+/** * OPEN LIVE EMERGENCY MODAL TRIGGER 
+ * Updated to accept lat/lng and trigger the map
  */
-function openLiveEmergencyModal(id, urgency, status, rescuerName, rescuerPhone, initials) {
+function openLiveEmergencyModal(id, urgency, status, rescuerName, rescuerPhone, initials, lat, lng) {
     const backdrop = document.getElementById('live-modal-backdrop');
     const content = document.getElementById('live-modal-content');
 
@@ -15,152 +150,51 @@ function openLiveEmergencyModal(id, urgency, status, rescuerName, rescuerPhone, 
     safeSetText('live-rescuer-phone', rescuerPhone || '---');
     safeSetText('live-rescuer-initials', initials || '?');
 
+    // Handle WhatsApp Link
     const waLink = document.getElementById('live-rescuer-whatsapp');
     if (waLink) {
         if (rescuerPhone && rescuerPhone !== '---') {
-            // Remove any non-numeric characters (dashes, spaces, plus signs)
             const cleanPhone = rescuerPhone.replace(/\D/g, '');
             waLink.href = `https://wa.me/${cleanPhone}`;
-            waLink.style.display = 'flex'; // Show if phone exists
+            waLink.style.display = 'flex';
         } else {
-            waLink.href = '#';
-            waLink.style.display = 'none'; // Hide link if no rescuer assigned yet
+            waLink.style.display = 'none';
         }
     }
 
-    // Update the visual timeline steps
-    updateTimelineUI(status);
+    if (lat && lng && lat !== 'null' && lat !== null) {
+        loadActivityMap(id, lat, lng);
+    } else {
+        // Optional: Handle case where location is missing (e.g. hide map)
+        const mapEl = document.getElementById('activity-live-map');
+        if(mapEl) mapEl.innerHTML = '<div class="flex items-center justify-center h-full text-gray-400">Location not available</div>';
+    }
+    // ----------------------------------------
 
     if (backdrop && content) {
         backdrop.classList.remove('hidden');
         content.classList.remove('hidden');
-        
-        // Re-init Lucide for AJAX-loaded icons
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-
-        // Optional: Trigger the car animation
-        setTimeout(() => {
-            const car = document.getElementById('rescuer-marker');
-            if(car) car.style.transform = 'translate(50px, 50px)';
-        }, 300);
+        // Small delay for animation
+        setTimeout(() => content.classList.add('translate-y-0', 'opacity-100'), 10);
     }
-}
-
-/**
- * Manages the color and pulsing state of the timeline
- * Based on DB ENUM: pending, otw, transporting, treating, treated
- */
-function updateTimelineUI(dbStatus) {
-    const status = dbStatus.toLowerCase();
-    
-    // 1. Map for Timeline Steps
-    const statusMap = {
-        'pending': 'submitted',
-        'otw': 'on_the_way',
-        'transporting': 'transporting',
-        'treating': 'treating',
-        'treated': 'resolved'
-    };
-
-    const currentStepId = statusMap[status] || 'submitted';
-    const steps = ['submitted', 'on_the_way', 'arrived', 'transporting', 'treating', 'resolved'];
-    const currentIdx = steps.indexOf(currentStepId);
-
-    // 2. MAP ELEMENTS (Radar & Labels)
-    const emergencyRadar = document.getElementById('emergency-radar');
-    const emergencyLabel = document.getElementById('emergency-label');
-    const rescuerMarker = document.getElementById('rescuer-marker');
-
-    // Reset Map to default state first
-    if (emergencyRadar) emergencyRadar.classList.add('animate-ping', 'bg-red-500/10');
-    if (emergencyLabel) emergencyLabel.innerText = "Emergency Location";
-
-    if (rescuerMarker) {
-        const markerText = rescuerMarker.querySelector('span');
-        const markerIcon = rescuerMarker.querySelector('i');
-        const markerContainer = rescuerMarker.querySelector('div');
-
-        switch(status) {
-            case 'pending':
-                rescuerMarker.style.opacity = '0';
-                break;
-            case 'otw':
-                rescuerMarker.style.opacity = '1';
-                rescuerMarker.style.top = '20%'; 
-                rescuerMarker.style.left = '15%';
-                markerText.innerText = "RESCUER"; // Simple identifier
-                break;
-            case 'transporting':
-                rescuerMarker.style.top = '45%'; 
-                rescuerMarker.style.left = '40%';
-                markerText.innerText = "TRANSPORTING";
-                markerIcon.className = "fas fa-truck-medical animate-bounce";
-                markerContainer.classList.replace('bg-blue-600', 'bg-orange-500');
-                break;
-            case 'treating':
-                // CHANGE 1: Move to Vet Location
-                rescuerMarker.style.top = '35%'; 
-                rescuerMarker.style.left = '25%';
-                markerText.innerText = "AT VET";
-                
-                // CHANGE 2: Update Emergency Point to Vet Name & Stop Radar
-                if (emergencyLabel) emergencyLabel.innerText = "Paws & Claws Vet Clinic";
-                if (emergencyRadar) emergencyRadar.classList.add('opacity-0');
-                
-                markerContainer.className = "bg-purple-600 text-white p-2.5 rounded-xl shadow-xl border-2 border-white flex items-center gap-2";
-                break;
-            case 'treated':
-                rescuerMarker.style.top = '40%';
-                rescuerMarker.style.left = '50%';
-                markerText.innerText = "RESOLVED";
-                
-                // CHANGE 3: Stay at Vet Name & Stop Radar
-                if (emergencyLabel) emergencyLabel.innerText = "Paws & Claws Vet Clinic";
-                if (emergencyRadar) emergencyRadar.classList.add('opacity-0');
-                
-                markerContainer.className = "bg-green-600 text-white p-2.5 rounded-xl shadow-xl border-2 border-white flex items-center gap-2 scale-110";
-                break;
-        }
-    }
-
-    // 3. Update Timeline CSS (Fixed text issue)
-    steps.forEach((stepId, index) => {
-        const container = document.getElementById(`step-${stepId}`);
-        if (!container) return;
-
-        const dot = container.querySelector('div:first-child');
-        const textElement = container.querySelector('p:last-child'); // The label like "Rescuer On The Way"
-
-        // Reset
-        container.classList.remove('opacity-40');
-        dot.className = "absolute -left-[31px] top-1 w-4 h-4 rounded-full border-2 border-white transition-all";
-
-        if (index < currentIdx) {
-            // Completed Steps (Blue)
-            dot.classList.add('bg-blue-500');
-            textElement.className = "text-sm font-medium text-gray-600";
-        } else if (index === currentIdx) {
-            // Active Step (Orange Pulse)
-            dot.classList.add('bg-orange-500', 'animate-pulse', 'ring-4', 'ring-orange-100');
-            textElement.className = "text-sm font-bold text-gray-900"; 
-            // We NO LONGER change the innerText here, so "Rescuer On The Way" stays put.
-        } else {
-            // Future Steps (Gray)
-            container.classList.add('opacity-40');
-            dot.classList.add('bg-gray-200');
-            textElement.className = "text-sm font-medium text-gray-400";
-        }
-    });
 }
 
 function closeLiveEmergencyModal() {
     const backdrop = document.getElementById('live-modal-backdrop');
     const content = document.getElementById('live-modal-content');
+    
+    // STOP POLLING to save resources when modal is closed
+    if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+    }
 
     if (backdrop && content) {
-        backdrop.classList.add('hidden');
-        content.classList.add('hidden');
-        content.classList.remove('modal-enter');
+        content.classList.remove('translate-y-0', 'opacity-100');
+        setTimeout(() => {
+            backdrop.classList.add('hidden');
+            content.classList.add('hidden');
+        }, 300);
     }
 }
 
