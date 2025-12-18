@@ -559,120 +559,109 @@ async function generateAIInsights() {
 
 // --- GOOGLE MAPS DYNAMIC LOADER ---
 
-// 1. The Main Entry Point (Call this from member_templates.js)
 window.loadLiveMissionMap = function() {
-    // Check if map container exists (prevents errors if user is on a different page)
     if (!document.getElementById('live-tracking-map')) return;
 
     // Check if Google Maps is already loaded
     if (typeof google !== 'undefined' && typeof google.maps !== 'undefined') {
-        initLiveMissionMap(); // API exists, just run the logic
+        initLiveMissionMap(); 
     } else {
-        injectMapsScript(); // API missing, load it first
+        injectMapsScript(); 
     }
 };
 
-// 2. Inject the Script Tag (Only runs once)
 let isMapsScriptLoading = false;
 
 function injectMapsScript() {
-    if (isMapsScriptLoading) return; // Prevent double injection
+    if (isMapsScriptLoading) return; 
     isMapsScriptLoading = true;
 
     if (typeof GOOGLE_MAPS_KEY === 'undefined') {
-        console.error("GOOGLE_MAPS_KEY is missing! Check your header/footer.");
+        console.error("GOOGLE_MAPS_KEY is missing!");
         return;
     }
 
     const script = document.createElement('script');
+    // loading 'marker' library is required for AdvancedMarkerElement
     script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_KEY}&libraries=places,marker&callback=initLiveMissionMap`;
     script.async = true;
     script.defer = true;
-    
-    // Append to body
     document.body.appendChild(script);
 }
 
-// --- ACTUAL MAP LOGIC ---
+// --- MAP LOGIC ---
 
 let liveMap;
 let directionsService;
 let directionsRenderer;
 let rescuerMarker;
 let dbUpdateInterval;
+let routeThrottleTimer = null; // Prevents API spamming
 
 let currentRescuerPos = { lat: null, lng: null };
 
-// We attach this to 'window' so the Google Maps Callback can find it
 window.initLiveMissionMap = async function() {
     const mapEl = document.getElementById('live-tracking-map');
     if (!mapEl) return;
 
-    console.log("Initializing Map...");
+    // 1. Reset State (Fixes "Ghost Map" issues on re-entry)
+    routeThrottleTimer = null; 
+    rescuerMarker = null;
 
-    // 1. Get Destination Data from HTML attributes
+    // 2. Get Destination
     const destLat = parseFloat(mapEl.dataset.destLat);
     const destLng = parseFloat(mapEl.dataset.destLng);
     const emergencyId = mapEl.dataset.emergencyId;
 
-    if (!destLat || !destLng) {
-        mapEl.innerHTML = '<div class="flex items-center justify-center h-full text-red-500">Destination coordinates missing</div>';
-        return;
-    }
-
+    if (!destLat || !destLng) return;
     const destination = { lat: destLat, lng: destLng };
 
-    // 2. Initialize Map
-    // Note: We use the namespace directly if available, or import if needed.
-    // Since the script just loaded, google.maps should be available.
+    // 3. Import Libraries (New Modern Way)
     const { Map } = await google.maps.importLibrary("maps");
-    
+    const { AdvancedMarkerElement, PinElement } = await google.maps.importLibrary("marker"); 
+
+    // 4. Initialize Map
     liveMap = new Map(mapEl, {
         zoom: 15,
         center: destination, 
         disableDefaultUI: false,
-        mapId: "LIVE_MISSION_MAP"
+        mapId: "LIVE_MISSION_MAP" // REQUIRED for AdvancedMarkerElement
     });
 
-    // 3. Setup Directions (Routing)
+    // 5. Setup Directions
     directionsService = new google.maps.DirectionsService();
     directionsRenderer = new google.maps.DirectionsRenderer({
         map: liveMap,
-        suppressMarkers: true, // We will add custom markers
+        suppressMarkers: true, 
         polylineOptions: {
-            strokeColor: "#ea580c", // Orange route line
+            strokeColor: "#ea580c", 
             strokeWeight: 5
         }
     });
 
-    // 4. Add Static Destination Marker (Red Circle)
-    new google.maps.Marker({
-        position: destination,
-        map: liveMap,
-        title: "Emergency Location",
-        icon: {
-            path: google.maps.SymbolPath.CIRCLE,
-            scale: 10,
-            fillColor: "#DC2626", // Red
-            fillOpacity: 1,
-            strokeWeight: 2,
-            strokeColor: "white",
-        }
+    // 6. Add Destination Marker (Using AdvancedMarkerElement)
+    // Create a custom red pin
+    const destPin = new PinElement({
+        background: "#DC2626", // Red
+        borderColor: "#ffffff",
+        glyphColor: "#ffffff",
+        scale: 1.2
     });
 
-    // 5. Start Tracking User Location
-    startTracking(destination, emergencyId);
-    
-    console.log("Map Initialized Successfully");
+    new AdvancedMarkerElement({
+        map: liveMap,
+        position: destination,
+        title: "Emergency Location",
+        content: destPin.element // Use the custom pin
+    });
+
+    // 7. Start Tracking
+    startTracking(destination, emergencyId, AdvancedMarkerElement);
 };
 
-function startTracking(destination, emergencyId) {
-    if (!navigator.geolocation) {
-        alert("Geolocation is not supported by your browser.");
-        return;
-    }
+function startTracking(destination, emergencyId, AdvancedMarkerElement) {
+    if (!navigator.geolocation) return;
 
-    // A. Watch Position
     navigator.geolocation.watchPosition(
         (position) => {
             const pos = {
@@ -680,54 +669,50 @@ function startTracking(destination, emergencyId) {
                 lng: position.coords.longitude
             };
             
-            // Store globally for the DB updater
-            currentRescuerPos = pos;
+            currentRescuerPos = pos; // Save for DB Loop
 
-            // 1. Update/Create Rescuer Marker on Map
-            if (!rescuerMarker) {
-                rescuerMarker = new google.maps.Marker({
-                    position: pos,
-                    map: liveMap,
-                    title: "You",
-                    icon: {
-                        path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-                        scale: 6,
-                        fillColor: "#2563EB", // Blue
-                        fillOpacity: 1,
-                        rotation: position.coords.heading || 0,
-                        strokeWeight: 2,
-                        strokeColor: "white",
-                    }
-                });
-            } else {
-                rescuerMarker.setPosition(pos);
-                if (position.coords.heading) {
-                    const icon = rescuerMarker.getIcon();
-                    icon.rotation = position.coords.heading;
-                    rescuerMarker.setIcon(icon);
-                }
+            // A. Update Marker (Instant)
+            updateRescuerMarker(pos, AdvancedMarkerElement, position.coords.heading);
+
+            // B. Update Route (Throttled to every 5 seconds)
+            if (!routeThrottleTimer) {
+                updateRoute(pos, destination); // Run now
+                routeThrottleTimer = setTimeout(() => {
+                    routeThrottleTimer = null; // Allow next run after 5s
+                }, 5000);
             }
-
-            // 2. Recalculate Route
-            updateRoute(pos, destination);
         },
-        (error) => {
-            console.warn("GPS Error: ", error.message);
-        },
-        {
-            enableHighAccuracy: true,
-            maximumAge: 0
-        }
+        (error) => console.warn("GPS Error: ", error.message),
+        { enableHighAccuracy: true, maximumAge: 0 }
     );
 
-    // B. Database Sync Interval (Every 10 Seconds)
+    // C. Database Sync (Every 10s)
     if (dbUpdateInterval) clearInterval(dbUpdateInterval);
-    
     dbUpdateInterval = setInterval(() => {
-        if (currentRescuerPos.lat && currentRescuerPos.lng) {
-            updateLocationInDB(emergencyId, currentRescuerPos);
-        }
+        if (currentRescuerPos.lat) updateLocationInDB(emergencyId, currentRescuerPos);
     }, 10000); 
+}
+
+function updateRescuerMarker(pos, AdvancedMarkerElement, heading) {
+    // Custom Blue Arrow Pin
+    if (!rescuerMarker) {
+        const rescuerPin = document.createElement('div');
+        rescuerPin.innerHTML = '<i class="fa-solid fa-circle-arrow-up text-blue-600 text-3xl bg-white rounded-full shadow-md"></i>';
+        
+        rescuerMarker = new AdvancedMarkerElement({
+            map: liveMap,
+            position: pos,
+            title: "You",
+            content: rescuerPin
+        });
+    } else {
+        rescuerMarker.position = pos;
+    }
+
+    // Rotate the arrow if heading exists
+    if (heading && rescuerMarker.content) {
+        rescuerMarker.content.style.transform = `rotate(${heading}deg)`;
+    }
 }
 
 function updateRoute(origin, destination) {
@@ -739,22 +724,19 @@ function updateRoute(origin, destination) {
         if (status === "OK") {
             directionsRenderer.setDirections(response);
             
-            // Update Text (Optional)
+            // Update ETA Text
             const leg = response.routes[0].legs[0];
-            const durText = leg.duration.text;
-            const statusTextEl = document.getElementById('status-text');
-            if(statusTextEl) statusTextEl.innerText = `En Route (${durText} away)`;
-            
+            const statusTextEl = document.getElementById('status-text'); // Ensure you have this ID in HTML if you want to use it
+            if(statusTextEl) statusTextEl.innerText = `En Route (${leg.duration.text})`;
         } else {
-            // Suppress zero_results warnings if just starting up
-            if(status !== 'ZERO_RESULTS') {
-                console.error("Directions request failed: " + status);
+            // Ignore small errors, only log if critical
+            if(status !== 'ZERO_RESULTS' && status !== 'OVER_QUERY_LIMIT') {
+                console.error("Route failed: " + status);
             }
         }
     });
 }
 
-// C. AJAX Call to PHP
 async function updateLocationInDB(emergencyId, pos) {
     const formData = new FormData();
     formData.append('emergency_id', emergencyId);
@@ -762,14 +744,6 @@ async function updateLocationInDB(emergencyId, pos) {
     formData.append('lng', pos.lng);
 
     try {
-        // NOTE: Ensure this path is correct relative to where your HTML page is loaded!
-        // If your URL is mysite.com/member/dashboard, then '../api/' goes to mysite.com/api/
-        await fetch('../api/update_rescuer_location.php', {
-            method: 'POST',
-            body: formData
-        });
-        console.log("Location synced to DB:", new Date().toLocaleTimeString());
-    } catch (err) {
-        console.error("Failed to sync location", err);
-    }
+        await fetch('../api/update_rescuer_location.php', { method: 'POST', body: formData });
+    } catch (err) { console.error(err); }
 }
