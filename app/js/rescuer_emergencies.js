@@ -389,6 +389,16 @@ async function advanceMissionStatus() {
         formData.append('emergency_id', emergencyId);
         formData.append('status', nextStatus);
 
+        if (nextStatus === 'treating') {
+            const vetId = btn.dataset.vetId;
+            if (vetId) {
+                formData.append('vet_id', vetId);
+            } else {
+                // Failsafe: If page was refreshed and somehow vetId is missing
+                console.warn("Vet ID missing. Attempting to proceed without specific assignment.");
+            }
+        }
+
         const response = await fetch('../../api/update_mission_status.php', {
             method: 'POST',
             body: formData
@@ -680,6 +690,19 @@ window.initLiveMissionMap = async function() {
 
     // 7. Start Tracking
     startTracking(destination, emergencyId, AdvancedMarkerElement);
+
+    const btn = document.getElementById('main-action-btn');
+    if (btn && btn.dataset.currentStatus === 'transporting') {
+        // Use the emergency location (or rescuer location if available) to find the vet
+        const destLat = mapEl.dataset.destLat;
+        const destLng = mapEl.dataset.destLng;
+        // Small delay to ensure everything is ready
+        setTimeout(() => {
+            if (typeof window.rerouteToVet === 'function') {
+                window.rerouteToVet(destLat, destLng);
+            }
+        }, 1000);
+    }
 };
 
 function startTracking(destination, emergencyId, AdvancedMarkerElement) {
@@ -774,6 +797,12 @@ window.rerouteToVet = async function(currentLat, currentLng) {
 
         const vet = data.vet;
         const vetLocation = { lat: parseFloat(vet.latitude), lng: parseFloat(vet.longitude) };
+
+        const btn = document.getElementById('main-action-btn');
+        if (btn) {
+            btn.dataset.vetId = vet.user_id; // Store ID
+            console.log("Locked onto Vet ID:", vet.user_id);
+        }
 
         console.log("Nearest Vet:", vet.full_name);
 

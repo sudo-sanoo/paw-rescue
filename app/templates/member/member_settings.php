@@ -131,12 +131,14 @@ $initials = getInitials($full_name);
                 <i data-lucide="history" class="w-5 h-5 text-orange-500"></i>
                 History
             </h3>
+            <?php if ($role_identifier === 'user' || $role_identifier === 'volunteer'): ?>
             <div class="space-y-4">
                 <div class="flex items-center justify-between py-2 border-b border-gray-50">
                     <div><p class="font-medium text-gray-800">Rescuer Application</p><p class="text-sm text-gray-500">View your past applications to be a rescuer.</p></div>
                     <button onclick="openModal('application-history-modal')" class="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors">&nbsp;View&nbsp;</button>
                 </div>
             </div>
+            <?php endif; ?>
         </div>
 
         <!-- Security Section (Editable Fields) -->

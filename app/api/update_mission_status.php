@@ -14,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $user_id = $_SESSION['user_id'];
 $emergency_id = $_POST['emergency_id'] ?? null;
 $new_status = $_POST['status'] ?? null;
+$vet_id = $_POST['vet_id'] ?? null; // <--- NEW PARAMETER
 
 // 1. Validation
 if (!$emergency_id || !$new_status) {
@@ -28,21 +29,33 @@ if (!in_array($new_status, $allowed_statuses)) {
 }
 
 // 2. Update Database
-// We ensure the user is actually the assigned rescuer (rescuer_transport = user_id)
-$sql = "UPDATE emergencies 
-        SET status = ?, updated_at = NOW() 
-        WHERE emergency_id = ? AND rescuer_transport = ?";
+$sql = "";
+$stmt = null;
 
-$stmt = $conn->prepare($sql);
-$stmt->bind_param("sss", $new_status, $emergency_id, $user_id);
-
-if ($stmt->execute() && $stmt->affected_rows > 0) {
-    echo json_encode(['success' => true, 'message' => 'Status updated successfully']);
+// LOGIC: If handing off to vet ('treating'), we must update vet_treatment column
+if ($new_status === 'treating' && $vet_id) {
+    $sql = "UPDATE emergencies 
+            SET status = ?, vet_treatment = ?, updated_at = NOW() 
+            WHERE emergency_id = ? AND rescuer_transport = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ssss", $new_status, $vet_id, $emergency_id, $user_id);
 } else {
-    // If no rows affected, either ID is wrong, User is wrong, or Status was already set
-    echo json_encode(['success' => false, 'message' => 'Update failed. Mission may not exist or you are not assigned.']);
+    // Standard update for other statuses
+    $sql = "UPDATE emergencies 
+            SET status = ?, updated_at = NOW() 
+            WHERE emergency_id = ? AND rescuer_transport = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("sss", $new_status, $emergency_id, $user_id);
 }
 
-$stmt->close();
-$conn->close();
+if ($stmt->execute() && $stmt->affected_rows > 0) {
+    echo json_encode(['success' => true]);
+} else {
+    // Determine if it failed or if row just wasn't changed
+    if ($stmt->errno) {
+        echo json_encode(['success' => false, 'message' => 'DB Error: ' . $stmt->error]);
+    } else {
+        echo json_encode(['success' => true, 'message' => 'Status updated (No changes made or ID mismatch)']);
+    }
+}
 ?>

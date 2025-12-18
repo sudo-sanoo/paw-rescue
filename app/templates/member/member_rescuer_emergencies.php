@@ -19,7 +19,7 @@ $activeSql = "SELECT
               FROM emergencies e
               JOIN users u ON e.user_id = u.user_id
               WHERE e.rescuer_transport = ? 
-              AND e.status IN ('otw', 'transporting', 'treating') 
+              AND e.status IN ('otw', 'transporting') 
               LIMIT 1";
 
 $activeStmt = $conn->prepare($activeSql);

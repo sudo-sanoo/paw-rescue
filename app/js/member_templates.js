@@ -397,7 +397,7 @@ const tabTitles = {
     'adopt':     'Adopt an Animal',
     'join':      'Rescuer Application',
     'settings':  'Settings',
-    'vet_treatment_report': 'Treatment Report',
+    'vet_treatment_report': 'Treatment',
 };
 
 function switchTab(tabId) {
