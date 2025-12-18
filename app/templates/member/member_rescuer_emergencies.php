@@ -91,43 +91,166 @@ $urgencyStyles = [
 ?>
 
 <!-- VIEW: Rescuer Emergencies -->
-<div id="view-rescuer_emergency" class="animate-fade-in max-w-5xl mx-auto space-y-6">
+<div id="view-rescuer_emergency" class="animate-fade-in max-w-7xl mx-auto space-y-6">
     
     <?php if ($activeMission): ?>
     <!-- ACTIVE MISSION PAGE -->
-        <div id="active-mission-container" class="space-y-6">
-            <div class="bg-white rounded-2xl shadow-xl border border-orange-100 overflow-hidden">
-                <div class="bg-orange-600 px-6 py-4 flex justify-between items-center text-white">
-                    <div class="flex items-center gap-3">
-                        <div class="p-2 bg-white/20 rounded-lg animate-pulse">
-                            <i data-lucide="ambulance" class="w-6 h-6"></i>
-                        </div>
-                        <div>
-                            <h2 class="font-bold text-lg leading-tight">Active Rescue Mission</h2>
-                            <p class="text-xs text-orange-100 uppercase tracking-widest">ID: #<?= $activeMission['emergency_id'] ?></p>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- LEFT COLUMN: MAP (Takes 2 columns) -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Map Card -->
+                <div class="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden h-[500px] lg:h-[600px] relative group">
+                    <!-- Floating Map Label (Top Left) -->
+                    <div class="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur px-3 py-1.5 rounded-lg shadow-sm border border-gray-200">
+                        <div class="flex items-center gap-2">
+                            <span class="relative flex h-2 w-2">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                            </span>
+                            <span class="text-xs font-bold text-gray-700">Live GPS</span>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <span class="px-3 py-1 bg-white text-orange-600 rounded-full text-xs font-black uppercase">
-                            STATUS: <?= $activeMission['status'] ?>
-                        </span>
-                    </div>
-                </div>
 
-                <div class="p-8">
-                    <div class="text-center py-10 border-2 border-dashed border-gray-200 rounded-3xl">
-                        <i data-lucide="map-pin" class="w-12 h-12 text-gray-300 mx-auto mb-4"></i>
-                        <h3 class="text-xl font-bold text-gray-800">Mission Progress Controls</h3>
-                        <p class="text-gray-500 mt-2 max-w-sm mx-auto">
-                            The status update buttons (Arrived, Transporting, Treatment) will appear here.
-                        </p>
-                        
-                        <div class="mt-8 flex flex-wrap justify-center gap-4">
-                             </div>
+                    <!-- MOVED: Reporter Info Overlay (Top Right) -->
+                    <div class="absolute top-4 right-4 z-10 w-full max-w-[60%] lg:max-w-sm bg-white/95 backdrop-blur rounded-2xl p-4 shadow-lg border border-gray-200/50">
+                        <div class="flex justify-between items-start mb-3">
+                            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Reporter</h3>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" class="w-10 h-10 rounded-full bg-gray-50 border border-gray-100">
+                            <div class="flex-1 min-w-0">
+                                <p class="font-bold text-gray-900 text-sm truncate">Ahmad Razali</p>
+                                <p class="text-xs text-gray-500">+60 12-345 6789</p>
+                            </div>
+                            <div class="flex gap-2 shrink-0">
+                                <a href="https://wa.me/60123456789" target="_blank" class="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center hover:bg-green-100 transition-colors">
+                                    <i class="fa-brands fa-whatsapp"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <iframe 
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3983.7944062838526!2d101.71120287588764!3d3.1491783531548813!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31cc37d12d642491%3A0x6b107c13e5476d0e!2sPETRONAS%20Twin%20Towers!5e0!3m2!1sen!2smy!4v1716300000000!5m2!1sen!2smy" 
+                        width="100%" 
+                        height="100%" 
+                        style="border:0;" 
+                        allowfullscreen="" 
+                        loading="lazy" 
+                        class="map-filter"
+                        referrerpolicy="no-referrer-when-downgrade">
+                    </iframe>
+
+                    <!-- Map Actions -->
+                    <div class="absolute bottom-4 right-4 flex flex-col gap-2">
+                        <button class="bg-white p-3 rounded-xl shadow-lg text-gray-700 hover:bg-gray-50 transition-colors">
+                            <i data-lucide="crosshair" class="w-5 h-5"></i>
+                        </button>
                     </div>
                 </div>
             </div>
-        </div>
+
+            <!-- RIGHT COLUMN: DETAILS & AI (Takes 1 column) -->
+            <div class="space-y-6">
+                
+                <!-- Emergency Details Card -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+                    <h2 class="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Current Status</h2>
+                    
+                    <!-- Destination -->
+                    <div class="flex items-start gap-4 mb-6">
+                        <div class="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center shrink-0 text-orange-500 shadow-sm">
+                            <i class="fa-solid fa-location-dot text-xl"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span id="destination-label" class="text-xs font-bold text-gray-500 uppercase">Picking up at</span>
+                            </div>
+                            <h3 id="destination-text" class="text-lg font-bold text-gray-900 leading-tight">123 Jalan Ampang</h3>
+                            <p class="text-sm text-gray-500 mt-1">Near Construction Site B</p>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="relative mb-6">
+                        <div class="flex justify-between mb-2 text-xs font-medium text-gray-500">
+                            <span>Progress</span>
+                            <span id="status-text">En Route</span>
+                        </div>
+                        <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div id="progress-line" class="h-full bg-orange-500 transition-all duration-500" style="width: 50%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Main Action Button -->
+                    <button id="main-action-btn" onclick="advanceMissionStatus()" class="group w-full bg-gray-900 hover:bg-black text-white rounded-xl py-4 shadow-lg shadow-gray-200 flex items-center justify-center gap-3 transition-all transform active:scale-[0.98]">
+                        <span id="action-text" class="font-bold">Transport to Vet</span>
+                        <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                    </button>
+                </div>
+
+                <!-- AI Insights Section (Inline) -->
+                <div class="bg-gradient-to-br from-indigo-50 to-white rounded-2xl p-5 shadow-sm border border-indigo-100 relative overflow-hidden">
+                    <!-- Decorative blur -->
+                    <div class="absolute -top-6 -right-6 w-24 h-24 bg-indigo-100 rounded-full blur-2xl opacity-60"></div>
+
+                    <div class="relative z-10">
+                        <div class="flex items-center gap-2 mb-4">
+                            <div class="bg-indigo-600 text-white p-1.5 rounded-lg shadow-sm shadow-indigo-200">
+                                <i class="fa-solid fa-wand-magic-sparkles text-sm"></i>
+                            </div>
+                            <h3 class="font-bold text-gray-900 text-sm">AI Analysis</h3>
+                        </div>
+
+                        <!-- Initial State -->
+                        <div id="ai-initial" class="text-center py-4">
+                            <p class="text-xs text-gray-500 mb-3">Scan uploaded images for injuries and behavioral traits.</p>
+                            <button onclick="generateAIInsights()" class="w-full bg-white border border-indigo-200 text-indigo-600 text-sm font-bold py-2 rounded-xl hover:bg-indigo-50 transition-colors shadow-sm">
+                                Run Scan
+                            </button>
+                        </div>
+
+                        <!-- Loading State -->
+                        <div id="ai-content-loading" class="hidden py-6 text-center">
+                            <i class="fa-solid fa-circle-notch fa-spin text-2xl text-indigo-500 mb-2"></i>
+                            <p class="text-xs font-medium text-indigo-600">Processing media...</p>
+                        </div>
+
+                        <!-- Results State -->
+                        <div id="ai-content-results" class="hidden space-y-3 animate-fade-in">
+                            <!-- Severity -->
+                            <div class="flex items-center justify-between bg-white/60 p-2 rounded-lg border border-indigo-50">
+                                <span class="text-xs font-bold text-gray-600">Severity</span>
+                                <span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold">HIGH 8/10</span>
+                            </div>
+                            
+                            <div class="space-y-2">
+                                <div class="flex gap-2 items-start bg-white p-2 rounded-lg border border-indigo-50">
+                                    <i class="fa-solid fa-shield-dog text-orange-500 mt-1 text-xs"></i>
+                                    <div>
+                                        <p class="text-[10px] font-bold text-gray-700 uppercase">Behavior</p>
+                                        <p class="text-xs text-gray-600 leading-snug">Signs of fear-aggression. Avoid direct eye contact.</p>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2 items-start bg-white p-2 rounded-lg border border-indigo-50">
+                                    <i class="fa-solid fa-crutch text-blue-500 mt-1 text-xs"></i>
+                                    <div>
+                                        <p class="text-[10px] font-bold text-gray-700 uppercase">Injury</p>
+                                        <p class="text-xs text-gray-600 leading-snug">Possible hind leg fracture. Use rigid support.</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="text-center pt-2">
+                                <span class="text-[10px] text-indigo-400"><i class="fa-solid fa-check-circle mr-1"></i>Analysis Verified</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div> <!-- End Right Column -->
+
+        </div> 
 
     <?php else: ?>
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-2">

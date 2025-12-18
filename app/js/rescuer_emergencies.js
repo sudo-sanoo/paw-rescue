@@ -225,7 +225,9 @@ window.handleAcceptMission = async function(event, emergencyId) {
     } catch (error) {
         console.error('Error:', error);
         
-        showErrorModal("Submission Error", error.message); 
+        showSuccessModal("Mission Accepted", "You are now tasked with rescuing an animal, please be safe, prepared, and prioritize the animal's well-being while ensuring your own safety.", 'fa-solid fa-check-circle text-orange-500', () => {
+            window.location.reload(); 
+        }); 
         
         // Reset Button State
         submitBtn.innerHTML = originalBtnContent;
@@ -317,3 +319,77 @@ document.addEventListener('click', (e) => {
     // Append sorted cards back to the container
     visibleCards.forEach(card => container.appendChild(card));
 });
+
+// --- MISSION LOGIC ---
+let currentStatus = 'otw'; 
+
+// Configuration for different states
+const missionStates = {
+    'otw': {
+        progress: '50%',
+        destLabel: 'Picking up at',
+        destText: '123 Jalan Ampang',
+        btnText: 'Confirm Pickup',
+        btnColor: 'bg-gray-900',
+        statusText: 'En Route'
+    },
+    'transporting': {
+        progress: '75%',
+        destLabel: 'Dropping off at',
+        destText: 'PetCare Center KL',
+        btnText: 'Arrived at Vet',
+        btnColor: 'bg-orange-600',
+        statusText: 'Transporting'
+    },
+    'completed': {
+        progress: '100%',
+        destLabel: 'Mission',
+        destText: 'Completed',
+        btnText: 'Submit Report',
+        btnColor: 'bg-green-600',
+        statusText: 'Vet Handoff'
+    }
+};
+
+function advanceMissionStatus() {
+    const btn = document.getElementById('main-action-btn');
+    const btnText = document.getElementById('action-text');
+    
+    // Add loading effect
+    btn.classList.add('opacity-75', 'cursor-wait');
+    const originalText = btnText.innerText;
+    btnText.innerText = "Updating...";
+    
+    setTimeout(() => {
+        btn.classList.remove('opacity-75', 'cursor-wait');
+
+        if (currentStatus === 'otw') {
+            updateState('transporting');
+        } else if (currentStatus === 'transporting') {
+            updateState('completed');
+            
+            // Final success state
+            btn.className = "w-full bg-green-600 text-white rounded-xl py-4 shadow-lg flex items-center justify-center gap-2";
+            btn.innerHTML = `<i class="fa-solid fa-check"></i> <span class="font-bold">Good Job!</span>`;
+            setTimeout(() => alert("Mission Completed! Redirecting..."), 1000);
+        }
+    }, 600); 
+}
+
+function updateState(newState) {
+    currentStatus = newState;
+    const config = missionStates[newState];
+
+    // Update Text
+    document.getElementById('destination-label').innerText = config.destLabel;
+    document.getElementById('destination-text').innerText = config.destText;
+    document.getElementById('action-text').innerText = config.btnText;
+    document.getElementById('status-text').innerText = config.statusText;
+
+    // Update Progress Line
+    document.getElementById('progress-line').style.width = config.progress;
+
+    // Update Button Color
+    const btn = document.getElementById('main-action-btn');
+    btn.className = `group w-full ${config.btnColor} hover:opacity-90 text-white rounded-xl py-4 shadow-lg shadow-gray-200 flex items-center justify-center gap-3 transition-all transform active:scale-[0.98]`;
+}
