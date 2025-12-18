@@ -92,3 +92,23 @@ body {
     
     background-size: 60px 60px;
 }
+
+@keyframes pulse-0-50 {
+    0% { width: 0%; opacity: 1; }
+    50% { width: 50%; opacity: 0.5; }
+    100% { width: 0%; opacity: 1; }
+}
+
+@keyframes pulse-50-100 {
+    0% { width: 50%; opacity: 1; }
+    50% { width: 100%; opacity: 0.5; }
+    100% { width: 50%; opacity: 1; }
+}
+
+.animate-pulse-0-50 {
+    animation: pulse-0-50 2s infinite ease-in-out;
+}
+
+.animate-pulse-50-100 {
+    animation: pulse-50-100 2s infinite ease-in-out;
+}

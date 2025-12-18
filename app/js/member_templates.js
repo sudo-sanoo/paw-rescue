@@ -370,6 +370,19 @@ function afterPageLoad(tabId) {
         }, 200);
     }
 
+    // This triggers the Live Map whenever the user navigates to "Emergencies Now"
+    if (tabId === 'rescuer_emergencies') {
+        // We use a small timeout to ensure the DOM elements (<div id="live-tracking-map">) are ready
+        setTimeout(() => {
+            // Check if the loader function exists (it's in rescuer_emergencies.js)
+            if (typeof window.loadLiveMissionMap === 'function') {
+                window.loadLiveMissionMap(); 
+            } else {
+                console.warn("Live Map Loader not found. Is rescuer_emergencies.js loaded?");
+            }
+        }, 100);
+    }
+
     // Page-specific initializers
     if (tabId === 'settings' && typeof initSettings === 'function') {
         setTimeout(() => initSettings(), 0);

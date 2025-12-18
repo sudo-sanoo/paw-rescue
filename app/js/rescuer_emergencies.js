@@ -556,3 +556,220 @@ async function generateAIInsights() {
         containerInit.classList.remove('hidden');
     }
 }
+
+// --- GOOGLE MAPS DYNAMIC LOADER ---
+
+// 1. The Main Entry Point (Call this from member_templates.js)
+window.loadLiveMissionMap = function() {
+    // Check if map container exists (prevents errors if user is on a different page)
+    if (!document.getElementById('live-tracking-map')) return;
+
+    // Check if Google Maps is already loaded
+    if (typeof google !== 'undefined' && typeof google.maps !== 'undefined') {
+        initLiveMissionMap(); // API exists, just run the logic
+    } else {
+        injectMapsScript(); // API missing, load it first
+    }
+};
+
+// 2. Inject the Script Tag (Only runs once)
+let isMapsScriptLoading = false;
+
+function injectMapsScript() {
+    if (isMapsScriptLoading) return; // Prevent double injection
+    isMapsScriptLoading = true;
+
+    if (typeof GOOGLE_MAPS_KEY === 'undefined') {
+        console.error("GOOGLE_MAPS_KEY is missing! Check your header/footer.");
+        return;
+    }
+
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_KEY}&libraries=places,marker&callback=initLiveMissionMap`;
+    script.async = true;
+    script.defer = true;
+    
+    // Append to body
+    document.body.appendChild(script);
+}
+
+// --- ACTUAL MAP LOGIC ---
+
+let liveMap;
+let directionsService;
+let directionsRenderer;
+let rescuerMarker;
+let dbUpdateInterval;
+
+let currentRescuerPos = { lat: null, lng: null };
+
+// We attach this to 'window' so the Google Maps Callback can find it
+window.initLiveMissionMap = async function() {
+    const mapEl = document.getElementById('live-tracking-map');
+    if (!mapEl) return;
+
+    console.log("Initializing Map...");
+
+    // 1. Get Destination Data from HTML attributes
+    const destLat = parseFloat(mapEl.dataset.destLat);
+    const destLng = parseFloat(mapEl.dataset.destLng);
+    const emergencyId = mapEl.dataset.emergencyId;
+
+    if (!destLat || !destLng) {
+        mapEl.innerHTML = '<div class="flex items-center justify-center h-full text-red-500">Destination coordinates missing</div>';
+        return;
+    }
+
+    const destination = { lat: destLat, lng: destLng };
+
+    // 2. Initialize Map
+    // Note: We use the namespace directly if available, or import if needed.
+    // Since the script just loaded, google.maps should be available.
+    const { Map } = await google.maps.importLibrary("maps");
+    
+    liveMap = new Map(mapEl, {
+        zoom: 15,
+        center: destination, 
+        disableDefaultUI: false,
+        mapId: "LIVE_MISSION_MAP"
+    });
+
+    // 3. Setup Directions (Routing)
+    directionsService = new google.maps.DirectionsService();
+    directionsRenderer = new google.maps.DirectionsRenderer({
+        map: liveMap,
+        suppressMarkers: true, // We will add custom markers
+        polylineOptions: {
+            strokeColor: "#ea580c", // Orange route line
+            strokeWeight: 5
+        }
+    });
+
+    // 4. Add Static Destination Marker (Red Circle)
+    new google.maps.Marker({
+        position: destination,
+        map: liveMap,
+        title: "Emergency Location",
+        icon: {
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 10,
+            fillColor: "#DC2626", // Red
+            fillOpacity: 1,
+            strokeWeight: 2,
+            strokeColor: "white",
+        }
+    });
+
+    // 5. Start Tracking User Location
+    startTracking(destination, emergencyId);
+    
+    console.log("Map Initialized Successfully");
+};
+
+function startTracking(destination, emergencyId) {
+    if (!navigator.geolocation) {
+        alert("Geolocation is not supported by your browser.");
+        return;
+    }
+
+    // A. Watch Position
+    navigator.geolocation.watchPosition(
+        (position) => {
+            const pos = {
+                lat: position.coords.latitude,
+                lng: position.coords.longitude
+            };
+            
+            // Store globally for the DB updater
+            currentRescuerPos = pos;
+
+            // 1. Update/Create Rescuer Marker on Map
+            if (!rescuerMarker) {
+                rescuerMarker = new google.maps.Marker({
+                    position: pos,
+                    map: liveMap,
+                    title: "You",
+                    icon: {
+                        path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+                        scale: 6,
+                        fillColor: "#2563EB", // Blue
+                        fillOpacity: 1,
+                        rotation: position.coords.heading || 0,
+                        strokeWeight: 2,
+                        strokeColor: "white",
+                    }
+                });
+            } else {
+                rescuerMarker.setPosition(pos);
+                if (position.coords.heading) {
+                    const icon = rescuerMarker.getIcon();
+                    icon.rotation = position.coords.heading;
+                    rescuerMarker.setIcon(icon);
+                }
+            }
+
+            // 2. Recalculate Route
+            updateRoute(pos, destination);
+        },
+        (error) => {
+            console.warn("GPS Error: ", error.message);
+        },
+        {
+            enableHighAccuracy: true,
+            maximumAge: 0
+        }
+    );
+
+    // B. Database Sync Interval (Every 10 Seconds)
+    if (dbUpdateInterval) clearInterval(dbUpdateInterval);
+    
+    dbUpdateInterval = setInterval(() => {
+        if (currentRescuerPos.lat && currentRescuerPos.lng) {
+            updateLocationInDB(emergencyId, currentRescuerPos);
+        }
+    }, 10000); 
+}
+
+function updateRoute(origin, destination) {
+    directionsService.route({
+        origin: origin,
+        destination: destination,
+        travelMode: google.maps.TravelMode.DRIVING
+    }, (response, status) => {
+        if (status === "OK") {
+            directionsRenderer.setDirections(response);
+            
+            // Update Text (Optional)
+            const leg = response.routes[0].legs[0];
+            const durText = leg.duration.text;
+            const statusTextEl = document.getElementById('status-text');
+            if(statusTextEl) statusTextEl.innerText = `En Route (${durText} away)`;
+            
+        } else {
+            // Suppress zero_results warnings if just starting up
+            if(status !== 'ZERO_RESULTS') {
+                console.error("Directions request failed: " + status);
+            }
+        }
+    });
+}
+
+// C. AJAX Call to PHP
+async function updateLocationInDB(emergencyId, pos) {
+    const formData = new FormData();
+    formData.append('emergency_id', emergencyId);
+    formData.append('lat', pos.lat);
+    formData.append('lng', pos.lng);
+
+    try {
+        // NOTE: Ensure this path is correct relative to where your HTML page is loaded!
+        // If your URL is mysite.com/member/dashboard, then '../api/' goes to mysite.com/api/
+        await fetch('../api/update_rescuer_location.php', {
+            method: 'POST',
+            body: formData
+        });
+        console.log("Location synced to DB:", new Date().toLocaleTimeString());
+    } catch (err) {
+        console.error("Failed to sync location", err);
+    }
+}

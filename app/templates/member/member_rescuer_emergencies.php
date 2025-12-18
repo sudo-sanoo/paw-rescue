@@ -193,22 +193,14 @@ if($aiScore > 80) {
                         </div>
                     </div>
                     
-                    <iframe 
-                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3983.7944062838526!2d101.71120287588764!3d3.1491783531548813!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31cc37d12d642491%3A0x6b107c13e5476d0e!2sPETRONAS%20Twin%20Towers!5e0!3m2!1sen!2smy!4v1716300000000!5m2!1sen!2smy" 
-                        width="100%" 
-                        height="100%" 
-                        style="border:0;" 
-                        allowfullscreen="" 
-                        loading="lazy" 
-                        class="map-filter"
-                        referrerpolicy="no-referrer-when-downgrade">
-                    </iframe>
-
-                    <!-- Map Actions -->
-                    <div class="absolute bottom-4 right-4 flex flex-col gap-2">
-                        <button class="bg-white p-3 rounded-xl shadow-lg text-gray-700 hover:bg-gray-50 transition-colors">
-                            <i data-lucide="crosshair" class="w-5 h-5"></i>
-                        </button>
+                    <div id="live-tracking-map" class="w-full h-full bg-gray-100 relative" 
+                        data-dest-lat="<?= htmlspecialchars($activeMission['latitude']) ?>" 
+                        data-dest-lng="<?= htmlspecialchars($activeMission['longitude']) ?>"
+                        data-emergency-id="<?= htmlspecialchars($activeMission['emergency_id']) ?>">
+                        
+                        <div class="absolute inset-0 flex items-center justify-center text-gray-500">
+                            <i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Loading Map...
+                        </div>
                     </div>
                 </div>
             </div>
