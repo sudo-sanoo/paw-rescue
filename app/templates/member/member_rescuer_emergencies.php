@@ -88,13 +88,76 @@ $urgencyStyles = [
     ]
 ];
 
+// 1. Get Data & Parse JSON
+$aiStatus = $activeMission['ai_status']; 
+$aiScore = $activeMission['ai_severity_score'];
+
+// Attempt to decode the JSON we stored in the DB
+$aiData = json_decode($activeMission['ai_insight'], true);
+// Check if it's valid structured data
+$isStructured = json_last_error() === JSON_ERROR_NONE && is_array($aiData);
+
+// 2. Dynamic Colors based on Score
+$scoreColor = 'text-green-600 bg-green-50 border-green-200';
+$progressColor = 'bg-green-500';
+
+if($aiScore > 50) { 
+    $scoreColor = 'text-orange-600 bg-orange-50 border-orange-200'; 
+    $progressColor = 'bg-orange-500'; 
+}
+if($aiScore > 80) { 
+    $scoreColor = 'text-red-600 bg-red-50 border-red-200'; 
+    $progressColor = 'bg-red-500'; 
+}
+
 ?>
 
 <!-- VIEW: Rescuer Emergencies -->
 <div id="view-rescuer_emergency" class="animate-fade-in max-w-7xl mx-auto space-y-6">
     
-    <?php if ($activeMission): ?>
     <!-- ACTIVE MISSION PAGE -->
+    <?php if ($activeMission):
+
+        $reporterAvatar = $activeMission['reporter_photo'] 
+            ? "$upload_path/avatars/{$activeMission['reporter_photo']}" 
+            : "https://ui-avatars.com/api/?name=" . urlencode($activeMission['reporter_name']);
+
+        $status = $activeMission['status'];
+        
+        // Default State (OTW)
+        $ui = [
+            'progress' => '0%',
+            'status_text' => 'En Route',
+            'label' => 'Picking up at',
+            'location' => htmlspecialchars($activeMission['location_address']),
+            'btn_text' => 'Transport to Vet',
+            'btn_color' => 'bg-gray-900',
+            'icon' => 'fa-location-dot'
+        ];
+
+        if ($status === 'transporting') {
+            $ui = [
+                'progress' => '50%',
+                'status_text' => 'Transporting',
+                'label' => 'Dropping off at',
+                'location' => 'Partner Vet Clinic', 
+                'btn_text' => 'Arrived at Vet',
+                'btn_color' => 'bg-orange-600',
+                'icon' => 'fa-truck-medical'
+            ];
+        } elseif ($status === 'treating') {
+            $ui = [
+                'progress' => '100%',
+                'status_text' => 'Vet Handoff',
+                'label' => 'Mission Status',
+                'location' => 'Handover Completed',
+                'btn_text' => 'Submit Report',
+                'btn_color' => 'bg-green-600',
+                'icon' => 'fa-check'
+            ];
+        }
+    ?>
+    
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- LEFT COLUMN: MAP (Takes 2 columns) -->
             <div class="lg:col-span-2 space-y-6">
@@ -111,19 +174,19 @@ $urgencyStyles = [
                         </div>
                     </div>
 
-                    <!-- MOVED: Reporter Info Overlay (Top Right) -->
                     <div class="absolute top-4 right-4 z-10 w-full max-w-[60%] lg:max-w-sm bg-white/95 backdrop-blur rounded-2xl p-4 shadow-lg border border-gray-200/50">
                         <div class="flex justify-between items-start mb-3">
                             <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider">Reporter</h3>
                         </div>
                         <div class="flex items-center gap-3">
-                            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" class="w-10 h-10 rounded-full bg-gray-50 border border-gray-100">
+                            <img src="<?= $reporterAvatar ?>"
+                                    class="w-10 h-10 rounded-full object-cover bg-orange-100 border-2 border-white shadow-sm">
                             <div class="flex-1 min-w-0">
-                                <p class="font-bold text-gray-900 text-sm truncate">Ahmad Razali</p>
-                                <p class="text-xs text-gray-500">+60 12-345 6789</p>
+                                <p class="font-bold text-gray-900 text-sm truncate"><?= htmlspecialchars($activeMission['reporter_name']) ?></p>
+                                <p class="text-xs text-gray-500"><?= htmlspecialchars($activeMission['reporter_phone']) ?></p>
                             </div>
                             <div class="flex gap-2 shrink-0">
-                                <a href="https://wa.me/60123456789" target="_blank" class="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center hover:bg-green-100 transition-colors">
+                                <a href="https://wa.me/<?= str_replace(['+', '-', ' '], '', $activeMission['reporter_phone']) ?>" target="_blank" class="w-8 h-8 rounded-lg bg-green-50 text-green-600 flex items-center justify-center hover:bg-green-100 transition-colors">
                                     <i class="fa-brands fa-whatsapp"></i>
                                 </a>
                             </div>
@@ -166,25 +229,28 @@ $urgencyStyles = [
                             <div class="flex items-center gap-2 mb-1">
                                 <span id="destination-label" class="text-xs font-bold text-gray-500 uppercase">Picking up at</span>
                             </div>
-                            <h3 id="destination-text" class="text-lg font-bold text-gray-900 leading-tight">123 Jalan Ampang</h3>
-                            <p class="text-sm text-gray-500 mt-1">Near Construction Site B</p>
+                            <h3 id="destination-text" class="text-sm text-gray-900 mt-1 font-bold"><?= $ui['location'] ?></h3>
                         </div>
                     </div>
 
                     <!-- Progress Bar -->
                     <div class="relative mb-6">
                         <div class="flex justify-between mb-2 text-xs font-medium text-gray-500">
-                            <span>Progress</span>
-                            <span id="status-text">En Route</span>
+                            <span>Mission Progress</span>
+                            <span id="status-text"><?= $ui['status_text'] ?></span>
                         </div>
                         <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div id="progress-line" class="h-full bg-orange-500 transition-all duration-500" style="width: 50%"></div>
+                            <div id="progress-line" class="h-full bg-orange-500 transition-all duration-500" style="width: <?= $ui['progress'] ?>"></div>
                         </div>
                     </div>
 
                     <!-- Main Action Button -->
-                    <button id="main-action-btn" onclick="advanceMissionStatus()" class="group w-full bg-gray-900 hover:bg-black text-white rounded-xl py-4 shadow-lg shadow-gray-200 flex items-center justify-center gap-3 transition-all transform active:scale-[0.98]">
-                        <span id="action-text" class="font-bold">Transport to Vet</span>
+                    <button id="main-action-btn" 
+                            onclick="advanceMissionStatus()"
+                            data-emergency-id="<?= $activeMission['emergency_id'] ?>"
+                            data-current-status="<?= $status ?>"
+                            class="group w-full <?= $ui['btn_color'] ?> hover:bg-black text-white rounded-xl py-4 shadow-lg shadow-gray-200 flex items-center justify-center gap-3 transition-all transform active:scale-[0.98]">
+                        <span id="action-text" class="font-bold"><?= $ui['btn_text'] ?></span>
                         <i class="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
                     </button>
                 </div>
@@ -203,46 +269,78 @@ $urgencyStyles = [
                         </div>
 
                         <!-- Initial State -->
-                        <div id="ai-initial" class="text-center py-4">
+                        <div id="ai-initial" class="<?= $aiStatus === 'pending' ? '' : 'hidden' ?> text-center py-4">
                             <p class="text-xs text-gray-500 mb-3">Scan uploaded images for injuries and behavioral traits.</p>
                             <button onclick="generateAIInsights()" class="w-full bg-white border border-indigo-200 text-indigo-600 text-sm font-bold py-2 rounded-xl hover:bg-indigo-50 transition-colors shadow-sm">
-                                Run Scan
+                                Run AI Scan
                             </button>
                         </div>
 
                         <!-- Loading State -->
                         <div id="ai-content-loading" class="hidden py-6 text-center">
                             <i class="fa-solid fa-circle-notch fa-spin text-2xl text-indigo-500 mb-2"></i>
-                            <p class="text-xs font-medium text-indigo-600">Processing media...</p>
+                            <p class="text-xs font-medium text-indigo-600">Analyzing injuries...</p>
                         </div>
 
                         <!-- Results State -->
-                        <div id="ai-content-results" class="hidden space-y-3 animate-fade-in">
+                        <div id="ai-content-results" class="<?= $aiStatus === 'completed' ? '' : 'hidden' ?> space-y-3 animate-fade-in">
                             <!-- Severity -->
                             <div class="flex items-center justify-between bg-white/60 p-2 rounded-lg border border-indigo-50">
                                 <span class="text-xs font-bold text-gray-600">Severity</span>
-                                <span class="bg-red-100 text-red-700 px-2 py-0.5 rounded text-[10px] font-bold">HIGH 8/10</span>
+                                <span id="ai-score-text"
+                                        class="<?= $scoreColor ?> px-2 py-0.5 rounded text-[10px] font-bold">
+                                    <?= $aiScore !== null ? $aiScore . '/100' : '' ?>
+                                </span>
                             </div>
                             
-                            <div class="space-y-2">
-                                <div class="flex gap-2 items-start bg-white p-2 rounded-lg border border-indigo-50">
-                                    <i class="fa-solid fa-shield-dog text-orange-500 mt-1 text-xs"></i>
-                                    <div>
-                                        <p class="text-[10px] font-bold text-gray-700 uppercase">Behavior</p>
-                                        <p class="text-xs text-gray-600 leading-snug">Signs of fear-aggression. Avoid direct eye contact.</p>
+                            <div id="ai-structured-data">
+                                <?php if ($aiStatus === 'completed' && $isStructured): ?>
+                                    
+                                    <?php if (!empty($aiData['risks'])): ?>
+                                    <div class="mb-3">
+                                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Potential Risks</label>
+                                        <div class="flex flex-wrap gap-2">
+                                            <?php foreach($aiData['risks'] as $risk): ?>
+                                                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-red-50 text-red-700 text-xs font-bold border border-red-100">
+                                                    <i class="fa-solid fa-triangle-exclamation text-[10px]"></i> <?= htmlspecialchars($risk) ?>
+                                                </span>
+                                            <?php endforeach; ?>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="flex gap-2 items-start bg-white p-2 rounded-lg border border-indigo-50">
-                                    <i class="fa-solid fa-crutch text-blue-500 mt-1 text-xs"></i>
-                                    <div>
-                                        <p class="text-[10px] font-bold text-gray-700 uppercase">Injury</p>
-                                        <p class="text-xs text-gray-600 leading-snug">Possible hind leg fracture. Use rigid support.</p>
+                                    <?php endif; ?>
+
+                                    <?php if (!empty($aiData['equipment'])): ?>
+                                    <div class="mb-3">
+                                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Recommended Gear</label>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <?php foreach($aiData['equipment'] as $item): ?>
+                                                <div class="flex items-center gap-2 bg-white px-2 py-1.5 rounded-lg border border-gray-100 shadow-sm text-xs text-gray-700 font-medium">
+                                                    <i class="fa-solid fa-check text-green-500"></i> <?= htmlspecialchars($item) ?>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                            
-                            <div class="text-center pt-2">
-                                <span class="text-[10px] text-indigo-400"><i class="fa-solid fa-check-circle mr-1"></i>Analysis Verified</span>
+                                    <?php endif; ?>
+
+                                    <?php if (!empty($aiData['handling'])): ?>
+                                    <div class="bg-blue-50 rounded-xl p-3 border border-blue-100">
+                                        <div class="flex items-start gap-2">
+                                            <i class="fa-solid fa-hands-holding-circle text-blue-500 mt-0.5"></i>
+                                            <div>
+                                                <p class="text-[10px] font-bold text-blue-400 uppercase mb-0.5">Handling Advice</p>
+                                                <p class="text-xs text-blue-900 leading-relaxed font-medium">
+                                                    "<?= htmlspecialchars($aiData['handling']) ?>"
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <?php endif; ?>
+
+                                <?php elseif ($aiStatus === 'completed'): ?>
+                                    <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 text-xs text-gray-600 italic">
+                                        <?= nl2br(htmlspecialchars($activeMission['ai_insight'])) ?>
+                                    </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>

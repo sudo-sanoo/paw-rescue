@@ -89,7 +89,7 @@ $show_form = !$has_application || ($app_data['status'] === 'rejected' && $app_da
                     </div>
                 </div>
                 <div class="mt-8 text-center">
-                    <button onclick="switchTab('dashboard')" class="flex items-center justify-center gap-2 text-gray-400 hover:text-gray-600 text-sm font-medium transition-colors mx-auto">
+                    <button onclick="windows.location.href='member_dashboard.php'" class="flex items-center justify-center gap-2 text-gray-400 hover:text-gray-600 text-sm font-medium transition-colors mx-auto">
                         <i data-lucide="arrow-left-to-line"></i> Back to Dashboard
                     </button>
                 </div>

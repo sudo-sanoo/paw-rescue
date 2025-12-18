@@ -326,7 +326,7 @@ let currentStatus = 'otw';
 // Configuration for different states
 const missionStates = {
     'otw': {
-        progress: '50%',
+        progress: '0%',
         destLabel: 'Picking up at',
         destText: '123 Jalan Ampang',
         btnText: 'Confirm Pickup',
@@ -334,14 +334,14 @@ const missionStates = {
         statusText: 'En Route'
     },
     'transporting': {
-        progress: '75%',
+        progress: '50%',
         destLabel: 'Dropping off at',
         destText: 'PetCare Center KL',
         btnText: 'Arrived at Vet',
         btnColor: 'bg-orange-600',
         statusText: 'Transporting'
     },
-    'completed': {
+    'treating': {
         progress: '100%',
         destLabel: 'Mission',
         destText: 'Completed',
@@ -351,34 +351,81 @@ const missionStates = {
     }
 };
 
-function advanceMissionStatus() {
+// 2. Main Logic Function
+async function advanceMissionStatus() {
     const btn = document.getElementById('main-action-btn');
     const btnText = document.getElementById('action-text');
-    
-    // Add loading effect
+
+    if (!btn) return;
+
+    // READ FROM DATA ATTRIBUTES (Fixes AJAX issue)
+    const emergencyId = btn.dataset.emergencyId;
+    const currentStatus = btn.dataset.currentStatus;
+
+    if (!emergencyId || !currentStatus) {
+        console.error("Missing emergency context", btn.dataset);
+        alert("Error: Emergency data missing. Please refresh.");
+        return;
+    }
+
+    // Determine Next Status
+    let nextStatus = '';
+    if (currentStatus === 'otw') {
+        nextStatus = 'transporting';
+    } else if (currentStatus === 'transporting') {
+        nextStatus = 'treating'; 
+    } else {
+        return; 
+    }
+
+    // UI Loading State
     btn.classList.add('opacity-75', 'cursor-wait');
     const originalText = btnText.innerText;
     btnText.innerText = "Updating...";
-    
-    setTimeout(() => {
-        btn.classList.remove('opacity-75', 'cursor-wait');
+    btn.disabled = true;
 
-        if (currentStatus === 'otw') {
-            updateState('transporting');
-        } else if (currentStatus === 'transporting') {
-            updateState('completed');
+    try {
+        const formData = new FormData();
+        formData.append('emergency_id', emergencyId);
+        formData.append('status', nextStatus);
+
+        const response = await fetch('../../api/update_mission_status.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            updateState(nextStatus);
             
-            // Final success state
-            btn.className = "w-full bg-green-600 text-white rounded-xl py-4 shadow-lg flex items-center justify-center gap-2";
-            btn.innerHTML = `<i class="fa-solid fa-check"></i> <span class="font-bold">Good Job!</span>`;
-            setTimeout(() => alert("Mission Completed! Redirecting..."), 1000);
+            // Special handling for final state
+            if (nextStatus === 'treating') {
+                btn.className = "w-full bg-green-600 text-white rounded-xl py-4 shadow-lg flex items-center justify-center gap-2";
+                btn.innerHTML = `<i class="fa-solid fa-check"></i> <span class="font-bold">Good Job!</span>`;
+                
+                setTimeout(() => {
+                    alert("Mission successfully handed over to Vet!");
+                    window.location.reload(); 
+                }, 1500);
+            }
+        } else {
+            alert("Error: " + result.message);
+            btnText.innerText = originalText;
         }
-    }, 600); 
+    } catch (error) {
+        console.error('API Error:', error);
+        alert("Failed to connect to server.");
+        btnText.innerText = originalText;
+    } finally {
+        btn.classList.remove('opacity-75', 'cursor-wait');
+        btn.disabled = false;
+    }
 }
 
 function updateState(newState) {
-    currentStatus = newState;
     const config = missionStates[newState];
+    if (!config) return;
 
     // Update Text
     document.getElementById('destination-label').innerText = config.destLabel;
@@ -386,10 +433,126 @@ function updateState(newState) {
     document.getElementById('action-text').innerText = config.btnText;
     document.getElementById('status-text').innerText = config.statusText;
 
-    // Update Progress Line
-    document.getElementById('progress-line').style.width = config.progress;
-
-    // Update Button Color
+    // Update Button Style
     const btn = document.getElementById('main-action-btn');
-    btn.className = `group w-full ${config.btnColor} hover:opacity-90 text-white rounded-xl py-4 shadow-lg shadow-gray-200 flex items-center justify-center gap-3 transition-all transform active:scale-[0.98]`;
+    if (btn) {
+        btn.className = `group w-full ${config.btnColor} hover:opacity-90 text-white rounded-xl py-4 shadow-lg shadow-gray-200 flex items-center justify-center gap-3 transition-all transform active:scale-[0.98]`;
+        
+        // IMPORTANT: Update the data attribute so the next click works
+        btn.dataset.currentStatus = newState;
+    }
+}
+
+
+// --- AI ANALYSIS LOGIC ---
+
+async function generateAIInsights() {
+    // 1. Get Elements
+    const containerInit = document.getElementById('ai-initial');
+    const containerLoading = document.getElementById('ai-content-loading');
+    const containerResults = document.getElementById('ai-content-results');
+    
+    // Elements to update
+    const scoreText = document.getElementById('ai-score-text');
+    const structuredContainer = document.getElementById('ai-structured-data');
+
+    // 2. Get Context
+    const btn = document.getElementById('main-action-btn');
+    if (!btn || !btn.dataset.emergencyId) {
+        return alert("Error: Emergency context missing. Please refresh.");
+    }
+    const emergencyId = btn.dataset.emergencyId;
+
+    // 3. Show Loading
+    containerInit.classList.add('hidden');
+    containerLoading.classList.remove('hidden');
+
+    try {
+        const formData = new FormData();
+        formData.append('emergency_id', emergencyId);
+
+        // 4. API Call
+        const response = await fetch('../api/generate_ai_insight.php', {
+            method: 'POST', body: formData
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            // --- A. Update Score ---
+            scoreText.innerText = result.score + '/100';
+            
+            // Dynamic Colors
+            let colorClass = 'bg-green-500';
+            let textClass = 'text-green-600';
+            if(result.score > 50) { colorClass = 'bg-orange-500'; textClass = 'text-orange-600'; }
+            if(result.score > 80) { colorClass = 'bg-red-500'; textClass = 'text-red-600'; }
+            
+            scoreText.className = `text-sm font-bold ${textClass}`;
+
+            // --- B. Build Structured HTML ---
+            const data = result.insight; // This is an Object: { risks:[], equipment:[], handling:"" }
+            let html = '';
+
+            // 1. RISKS
+            if (data.risks && data.risks.length > 0) {
+                html += `
+                <div class="mb-3">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Potential Risks</label>
+                    <div class="flex flex-wrap gap-2">
+                        ${data.risks.map(risk => `
+                            <span class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-red-50 text-red-700 text-xs font-bold border border-red-100">
+                                <i class="fa-solid fa-triangle-exclamation text-[10px]"></i> ${risk}
+                            </span>
+                        `).join('')}
+                    </div>
+                </div>`;
+            }
+
+            // 2. EQUIPMENT
+            if (data.equipment && data.equipment.length > 0) {
+                html += `
+                <div class="mb-3">
+                    <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5 block">Recommended Gear</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        ${data.equipment.map(item => `
+                            <div class="flex items-center gap-2 bg-white px-2 py-1.5 rounded-lg border border-gray-100 shadow-sm text-xs text-gray-700 font-medium">
+                                <i class="fa-solid fa-check text-green-500"></i> ${item}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>`;
+            }
+
+            // 3. HANDLING
+            if (data.handling) {
+                html += `
+                <div class="bg-blue-50 rounded-xl p-3 border border-blue-100">
+                    <div class="flex items-start gap-2">
+                        <i class="fa-solid fa-hands-holding-circle text-blue-500 mt-0.5"></i>
+                        <div>
+                            <p class="text-[10px] font-bold text-blue-400 uppercase mb-0.5">Handling Advice</p>
+                            <p class="text-xs text-blue-900 leading-relaxed font-medium">"${data.handling}"</p>
+                        </div>
+                    </div>
+                </div>`;
+            }
+
+            // Inject HTML
+            structuredContainer.innerHTML = html;
+
+            // Show Results
+            containerLoading.classList.add('hidden');
+            containerResults.classList.remove('hidden');
+
+        } else {
+            alert("AI Error: " + result.message);
+            containerLoading.classList.add('hidden');
+            containerInit.classList.remove('hidden');
+        }
+    } catch (error) {
+        console.error(error);
+        alert("Connection Failed");
+        containerLoading.classList.add('hidden');
+        containerInit.classList.remove('hidden');
+    }
 }
