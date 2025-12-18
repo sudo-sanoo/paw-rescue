@@ -114,6 +114,11 @@ $isStructured = false;
 
         // 2. Dynamic Colors based on Score
         $scoreColor = 'text-green-600 bg-green-50 border-green-200';
+
+        $progressWidth = '0%';
+        if ($activeMission['status'] === 'transporting') $progressWidth = '50%';
+        if ($activeMission['status'] === 'treating') $progressWidth = '100%';
+
         $progressColor = 'bg-green-500';
 
         if($aiScore > 50) { 
@@ -233,7 +238,7 @@ $isStructured = false;
                             <span id="status-text"><?= $ui['status_text'] ?></span>
                         </div>
                         <div class="h-2 bg-gray-100 rounded-full overflow-hidden">
-                            <div id="progress-line" class="h-full bg-orange-500 transition-all duration-500" style="width: <?= $ui['progress'] ?>"></div>
+                            <div id="progress-line" class="h-full bg-gradient-to-r from-gray-100 to-orange-600 rounded-full transition-all duration-700 ease-out shadow-lg animate-pulse" style="width: <?= $progressWidth ?>"></div>
                         </div>
                     </div>
 

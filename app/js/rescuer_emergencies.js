@@ -326,7 +326,7 @@ let currentStatus = 'otw';
 // Configuration for different states
 const missionStates = {
     'otw': {
-        progress: '0%',
+        progress: '15%',
         destLabel: 'Picking up at',
         destText: '123 Jalan Ampang',
         btnText: 'Confirm Pickup',
@@ -398,6 +398,24 @@ async function advanceMissionStatus() {
 
         if (result.success) {
             updateState(nextStatus);
+
+            if (nextStatus === 'transporting') {
+                console.log("Status changed to Transporting. calculating vet route...");
+                
+                // Get the Emergency Location (Where we are now)
+                const mapEl = document.getElementById('live-tracking-map');
+                if (mapEl) {
+                    const currentLat = mapEl.dataset.destLat;
+                    const currentLng = mapEl.dataset.destLng;
+
+                    // Call the function we added to window scope earlier
+                    if (typeof window.rerouteToVet === 'function') {
+                        window.rerouteToVet(currentLat, currentLng);
+                    } else {
+                        console.warn("rerouteToVet function not found. Check rescuer_emergencies.js");
+                    }
+                }
+            }
             
             // Special handling for final state
             if (nextStatus === 'treating') {
@@ -432,6 +450,11 @@ function updateState(newState) {
     document.getElementById('destination-text').innerText = config.destText;
     document.getElementById('action-text').innerText = config.btnText;
     document.getElementById('status-text').innerText = config.statusText;
+
+    const progressLine = document.getElementById('progress-line');
+    if (progressLine) {
+        progressLine.style.width = config.progress;
+    }
 
     // Update Button Style
     const btn = document.getElementById('main-action-btn');
@@ -736,6 +759,61 @@ function updateRoute(origin, destination) {
         }
     });
 }
+
+window.rerouteToVet = async function(currentLat, currentLng) {
+    console.log("Finding nearest vet...");
+
+    try {
+        const response = await fetch(`../../api/get_nearest_vet.php?lat=${currentLat}&lng=${currentLng}`);
+        const data = await response.json();
+
+        if (!data.success) {
+            alert("No veterinarians found nearby!");
+            return;
+        }
+
+        const vet = data.vet;
+        const vetLocation = { lat: parseFloat(vet.latitude), lng: parseFloat(vet.longitude) };
+
+        console.log("Nearest Vet:", vet.full_name);
+
+        // Import Marker Library
+        const { PinElement, AdvancedMarkerElement } = await google.maps.importLibrary("marker");
+        
+        // Green Pin for Vet
+        const vetPin = new PinElement({
+            background: "#16A34A", 
+            borderColor: "#ffffff",
+            glyphColor: "#ffffff",
+            scale: 1.2
+        });
+
+        // Add Vet Marker
+        new AdvancedMarkerElement({
+            map: liveMap,
+            position: vetLocation,
+            title: `Vet: ${vet.full_name}`,
+            content: vetPin.element
+        });
+
+        // Update the Route
+        if (currentRescuerPos.lat) {
+            updateRoute(currentRescuerPos, vetLocation);
+        } else {
+             // If GPS hasn't locked yet, we can't draw route, but pin is there.
+             console.log("Waiting for GPS lock to draw route to vet...");
+        }
+
+        // Update UI
+        const statusTextEl = document.getElementById('status-text');
+        if(statusTextEl) statusTextEl.innerHTML = `Transporting to <b>${vet.full_name}</b>`;
+
+        alert(`Route updated! Proceed to ${vet.full_name} (${parseFloat(vet.distance).toFixed(1)}km away).`);
+
+    } catch (error) {
+        console.error("Error finding vet:", error);
+    }
+};
 
 async function updateLocationInDB(emergencyId, pos) {
     const formData = new FormData();
