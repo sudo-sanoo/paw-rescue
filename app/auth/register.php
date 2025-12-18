@@ -16,7 +16,7 @@ function normalizePhoneToPlus60($phone) {
         return '+60' . substr($digits, 1); // Leading 0 -> +60
     }
 
-    if (preg_match('/^1[0-9]{7,8}$/', $digits)) {
+    if (preg_match('/^1[0-9]{7,9}$/', $digits)) {
         return '+60' . $digits; // User types just 123456789
     }
 
@@ -25,7 +25,7 @@ function normalizePhoneToPlus60($phone) {
 
 function isValidMYPhonePlus60($phonePlus) {
     $digits = ltrim($phonePlus, '+');
-    return (bool) preg_match('/^60(1[0-9]{7,8})$/', $digits);
+    return (bool) preg_match('/^60(1[0-9]{7,9})$/', $digits);
 }
 
 $name = trim($_POST['name'] ?? '');
