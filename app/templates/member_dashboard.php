@@ -34,6 +34,14 @@ $phone = $user['phone'];
 $profile_photo = $user['profile_photo'] ?? ''; // stored as relative path like "images/uploads/avatars/abc.png"
 
 $initials = getInitials($user['full_name']);
+
+$impact_query = "SELECT * FROM emergencies 
+                 WHERE status = 'treated' 
+                 ORDER BY updated_at DESC 
+                 LIMIT 6"; // Limiting to 6 for layout nicety
+$impact_stmt = $conn->prepare($impact_query);
+$impact_stmt->execute();
+$impact_stories = $impact_stmt->get_result();
 ?>
 
 <!DOCTYPE html>
@@ -227,60 +235,54 @@ $initials = getInitials($user['full_name']);
                         <?php endif; ?>
 
                         <!-- Recent Success Stories -->
-                        <div>
-                            <div class="flex items-center justify-between mb-4">
-                                <h3 class="text-lg font-bold text-gray-800">Community Impact</h3>
-                                <!-- Custom Dropdown: Home Stats -->
-                                <div class="relative custom-dropdown-container">
-                                    <button onclick="toggleCustomDropdown('home-stats')" class="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-lg px-4 py-2 hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm focus:ring-2 focus:ring-orange-100">
-                                        <span id="home-stats-label">Today</span>
-                                        <i data-lucide="chevron-down" class="w-4 h-4 text-gray-400"></i>
-                                    </button>
-                                    <!-- Dropdown Menu -->
-                                    <div id="home-stats-menu" class="custom-dropdown-menu hidden absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden dropdown-enter z-50">
-                                        <div class="p-1">
-                                            <button onclick="selectCustomOption('home-stats', 'today', 'Today')" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 rounded-lg transition-colors flex items-center justify-between group">
-                                                Today
-                                            </button>
-                                            <button onclick="selectCustomOption('home-stats', '3days', 'Past 3 Days')" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 rounded-lg transition-colors flex items-center justify-between group">
-                                                Past 3 Days
-                                            </button>
-                                            <button onclick="selectCustomOption('home-stats', 'week', 'This Week')" class="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 rounded-lg transition-colors flex items-center justify-between group">
-                                                This Week
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
+                        <div class="mt-8">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                                    Community Impact
+                                </h3>
                             </div>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <!-- Story 1 -->
-                                <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col">
-                                    <img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=500&q=60" class="w-full h-40 object-cover rounded-lg mb-4" alt="Rescued Dog">
-                                    <h4 class="font-bold text-gray-800">Luna found a home!</h4>
-                                    <p class="text-sm text-gray-500 mt-1 line-clamp-2">Thanks to a report by user @sarah, Luna was treated for a broken leg and adopted yesterday.</p>
-                                    <div class="mt-auto pt-4 flex items-center gap-2 text-xs font-medium text-green-600">
-                                        <i data-lucide="check-circle" class="w-4 h-4"></i> Rescued & Adopted
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <?php if ($impact_stories->num_rows > 0): ?>
+                                    <?php while($story = $impact_stories->fetch_assoc()): ?>
+                                        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-300 flex flex-col h-full">
+                                            
+                                            <div class="p-5 flex-1 flex flex-col">
+                                                <div class="flex items-center justify-between mb-3">
+                                                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-orange-50 text-orange-600 capitalize">
+                                                        <i class="fa-solid fa-<?php echo ($story['animal_type'] === 'dog' ? 'dog' : ($story['animal_type'] === 'cat' ? 'cat' : ($story['animal_type'] === 'bird' ? 'dove' : 'paw'))); ?>"></i>
+                                                        <?php echo htmlspecialchars($story['animal_type']); ?>
+                                                    </span>
+                                                </div>
+
+                                                <div class="mb-4 flex-1">
+                                                    <h4 class="font-bold text-gray-800 text-sm mb-2">
+                                                        Case #<?php echo substr($story['emergency_id'], -5); ?>
+                                                    </h4>
+                                                    <p class="text-gray-600 text-sm leading-relaxed line-clamp-3">
+                                                        <?php 
+                                                        // PRIORITIZE OUTCOME, FALLBACK TO DESCRIPTION
+                                                        $story_text = !empty($story['outcome']) ? $story['outcome'] : $story['description'];
+                                                        echo htmlspecialchars($story_text); 
+                                                        ?>
+                                                    </p>
+                                                </div>
+
+                                                <div class="pt-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+                                                    <span><i class="fa-regular fa-calendar mr-1"></i> <?php echo date('M d, Y', strtotime($story['updated_at'])); ?></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <?php endwhile; ?>
+                                <?php else: ?>
+                                    <div class="col-span-full py-12 text-center bg-white rounded-xl border border-dashed border-gray-200">
+                                        <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-50 text-gray-400 mb-3">
+                                            <i class="fa-solid fa-heart-crack"></i>
+                                        </div>
+                                        <h3 class="text-sm font-medium text-gray-900">No success stories yet</h3>
+                                        <p class="text-sm text-gray-500 mt-1">Once animals are treated, their stories will appear here.</p>
                                     </div>
-                                </div>
-                                <!-- Story 2 -->
-                                <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col">
-                                    <img src="https://images.unsplash.com/photo-1573865526739-10659fec78a5?auto=format&fit=crop&w=500&q=60" class="w-full h-40 object-cover rounded-lg mb-4" alt="Rescued Cat">
-                                    <h4 class="font-bold text-gray-800">Kitten Rescue</h4>
-                                    <p class="text-sm text-gray-500 mt-1 line-clamp-2">A litter of kittens stuck in a drain was successfully rescued by our volunteer team.</p>
-                                    <div class="mt-auto pt-4 flex items-center gap-2 text-xs font-medium text-blue-600">
-                                        <i data-lucide="shield" class="w-4 h-4"></i> Safe at Shelter
-                                    </div>
-                                </div>
-                                <!-- Stats -->
-                                <div class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col justify-center items-center text-center space-y-4">
-                                    <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center text-orange-600">
-                                        <i data-lucide="activity" class="w-8 h-8"></i>
-                                    </div>
-                                    <div>
-                                        <h4 class="text-3xl font-bold text-gray-800">124</h4>
-                                        <p class="text-sm text-gray-500">Animals saved this month</p>
-                                    </div>
-                                </div>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
